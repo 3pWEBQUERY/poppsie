@@ -1,6 +1,6 @@
 import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { conversationMembers, conversations, messages } from "@/db/schema";
+import { conversationMembers, conversations, messageAttachments, messages } from "@/db/schema";
 import { publish } from "@/lib/realtime/publish";
 
 /**
@@ -51,27 +51,43 @@ type InsertMessage = {
   body?: string | null;
   replyToId?: string | null;
   bookingId?: string | null;
+  /** Medien (purpose "message"), werden vor dem Echtzeit-Event gespeichert. */
+  attachments?: { mediaId: string; viewOnce?: boolean }[];
+  /** Vorschautext für Liste/Benachrichtigung (Standard: Anfang des Textes). */
+  preview?: string;
 };
 
-/** Nachricht speichern, Konversation aktualisieren und Echtzeit-Event an alle Teilnehmer senden. */
+/**
+ * Nachricht speichern, Konversation aktualisieren und Echtzeit-Events senden:
+ * Empfänger erhalten "message.new" (zählt als ungelesen), der Absender "message.sent" (Sync weiterer Tabs).
+ */
 export async function insertMessage(m: InsertMessage) {
   const [row] = await db
     .insert(messages)
     .values({ conversationId: m.conversationId, senderId: m.senderId, type: m.type ?? "text", body: m.body ?? null, replyToId: m.replyToId ?? null, bookingId: m.bookingId ?? null })
     .returning();
+  if (m.attachments?.length) {
+    await db.insert(messageAttachments).values(m.attachments.map((a) => ({ messageId: row!.id, mediaId: a.mediaId, viewOnce: a.viewOnce ?? false })));
+  }
   await db.update(conversations).set({ lastMessageAt: row!.createdAt }).where(eq(conversations.id, m.conversationId));
+  // Antwortet die angefragte Person, ist die Nachrichtenanfrage angenommen.
+  if (m.type !== "system") {
+    await db
+      .update(conversations)
+      .set({ isRequest: false })
+      .where(and(eq(conversations.id, m.conversationId), eq(conversations.isRequest, true), sql`${conversations.requestedBy} IS DISTINCT FROM ${m.senderId}`));
+  }
   // Archivierte Chats tauchen bei neuer Nachricht wieder auf
   await db
     .update(conversationMembers)
     .set({ archived: false })
     .where(eq(conversationMembers.conversationId, m.conversationId));
   const members = await conversationMemberIds(m.conversationId);
-  await publish(members, {
-    type: "message.new",
-    conversationId: m.conversationId,
-    messageId: row!.id,
-    senderId: m.senderId,
-    preview: m.type === "booking_card" ? "Buchung" : (m.body ?? "").slice(0, 80),
-  });
+  const preview = m.preview ?? (m.type === "booking_card" ? "Buchung" : m.attachments?.length && !m.body ? "Anhang" : (m.body ?? "").slice(0, 80));
+  await publish(
+    members.filter((id) => id !== m.senderId),
+    { type: "message.new", conversationId: m.conversationId, messageId: row!.id, senderId: m.senderId, preview },
+  );
+  await publish([m.senderId], { type: "message.sent", conversationId: m.conversationId, messageId: row!.id, senderId: m.senderId });
   return row!;
 }
