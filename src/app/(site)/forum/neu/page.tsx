@@ -3,7 +3,8 @@ import type { Metadata } from "next";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { groups } from "@/db/schema";
-import { LockedNotice } from "@/components/dashboard/locked-notice";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { ContentViewerProvider } from "@/components/content/viewer-context";
 import { ForumShell, type Crumb } from "@/components/forum/forum-shell";
 import { NewThreadForm } from "@/components/forum/new-thread-form";
@@ -44,7 +45,12 @@ export default async function NewThreadPage(props: PageProps<"/forum/neu">) {
       <ForumShell tree={tree} active={target && !target.groupId ? target.slug : null} crumbs={crumbs}>
         <h1 className="text-2xl font-extrabold">Neues Thema{target ? ` in ${target.name.replace(/^Forum: /, "")}` : ""}</h1>
         {!user.profileComplete ? (
-          <LockedNotice title="Neues Thema" />
+          <div className="flex flex-col items-center gap-3 rounded-lg border bg-card px-6 py-12 text-center">
+            <p className="text-sm text-muted-foreground">Bitte stelle zuerst dein Profil fertig, um Themen zu erstellen.</p>
+            <Button asChild>
+              <Link href="/dashboard/profil">Profil fertigstellen</Link>
+            </Button>
+          </div>
         ) : (
           <NewThreadForm categories={options} initialCategory={target && (groupMode || options.some((o) => o.value === target.id)) ? target.id : null} groupMode={groupMode} />
         )}

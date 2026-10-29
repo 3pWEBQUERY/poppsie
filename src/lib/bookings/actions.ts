@@ -7,6 +7,7 @@ import { db } from "@/db";
 import { bookings, users } from "@/db/schema";
 import { track } from "@/lib/analytics";
 import { ApiError, requireUser, run } from "@/lib/auth/guards";
+import { getSessionUser } from "@/lib/auth/session";
 import { insertMessage, getOrCreateConversation } from "@/lib/messaging/core";
 import { notify } from "@/lib/notify";
 import { writeLimit } from "@/lib/rate-limit";
@@ -29,7 +30,11 @@ export async function fetchSlots(input: { escortId: string; durationMin: number;
     const p = z
       .object({ escortId: z.uuid(), durationMin: z.number().int().min(15).max(1440), fromDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), days: z.number().int().min(1).max(14).optional(), excludeBookingId: z.uuid().optional() })
       .parse(input);
-    return slotsFor(p.escortId, p.durationMin, p.fromDate, p.days ?? 7, { excludeBookingId: p.excludeBookingId });
+    const viewer = await getSessionUser();
+    const [escort] = await db.select().from(users).where(eq(users.id, p.escortId));
+    if (!escort || escort.accountType !== "escort" || !(await canViewProfile(viewer, escort))) throw new ApiError("NOT_FOUND");
+    if (viewer?.id !== escort.id && !(await getBookingSettings(escort.id)).enabled) throw new ApiError("INVALID", "Keine Online-Buchung möglich");
+    return slotsFor(p.escortId, p.durationMin, p.fromDate, p.days ?? 7, { excludeBookingId: viewer?.id === escort.id ? p.excludeBookingId : undefined });
   });
 }
 

@@ -127,5 +127,6 @@ export async function bookingsTick() {
   await promptCompletion();
 }
 
-export const handlers: Record<string, JobHandler> = {};
+/** Manuell anstossbar, z. B. enqueue("bookings.tick"). */
+export const handlers: Record<string, JobHandler> = { "bookings.tick": bookingsTick };
 export const periodic: Periodic[] = [{ name: "bookings.tick", everyMs: 60_000, run: bookingsTick }];

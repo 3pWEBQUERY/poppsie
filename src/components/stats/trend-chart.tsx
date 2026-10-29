@@ -105,6 +105,7 @@ export function TrendChart({
   height = 200,
   comparison = true,
   domain,
+  dots = false,
 }: {
   data: SeriesPoint[];
   decimals?: number;
@@ -112,6 +113,7 @@ export function TrendChart({
   height?: number;
   comparison?: boolean;
   domain?: [number, number];
+  dots?: boolean;
 }) {
   const fmt = fmtFor(decimals, suffix);
   const [ref, width] = useWidth();
@@ -161,8 +163,9 @@ export function TrendChart({
             stroke={CUR}
             strokeWidth={2}
             dot={
-              data.length <= 14 ? { r: 3, fill: CUR, strokeWidth: 0 } : false
+              dots || data.length <= 14 ? { r: 4, fill: CUR, strokeWidth: 0 } : false
             }
+            connectNulls
             activeDot={{ r: 5, strokeWidth: 2, stroke: "#1d2024" }}
             isAnimationActive={false}
           />

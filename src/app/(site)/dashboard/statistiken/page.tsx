@@ -150,7 +150,7 @@ export default async function StatistikenPage(props: PageProps<"/dashboard/stati
           </span>
         }
       >
-        <TrendChart data={s.rating.history.map((h) => ({ key: h.key, label: h.label, value: h.avg as number, prev: 0 }))} comparison={false} domain={[0, 5]} height={180} decimals={2} />
+        <TrendChart data={s.rating.history.map((h) => ({ key: h.key, label: h.label, value: h.avg as number, prev: 0 }))} comparison={false} dots domain={[0, 5]} height={180} decimals={2} />
       </ChartCard>
 
       <ChartCard title="Stories im Zeitraum" description="Aufrufe, Likes und Kommentare pro Story">

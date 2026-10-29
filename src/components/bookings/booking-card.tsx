@@ -27,7 +27,12 @@ export function BookingCard({ booking, viewerId, className }: { booking: Booking
   const [counterSlot, setCounterSlot] = useState<Slot | null>(null);
   const handleLocked = useLockedHandler();
 
-  useEffect(() => setB(booking), [booking]);
+  // Neue Daten von aussen (z. B. Messenger lädt neu) übernehmen
+  const [prop, setProp] = useState(booking);
+  if (prop !== booking) {
+    setProp(booking);
+    setB(booking);
+  }
 
   const refresh = useCallback(async () => {
     const res = await fetchBooking(booking.id);
@@ -49,7 +54,8 @@ export function BookingCard({ booking, viewerId, className }: { booking: Booking
     : { name: b.escortName, avatarUrl: b.escortAvatarUrl, href: b.escortHref };
   const actions = allowedActions(b, viewerId);
   const tz = b.timezone;
-  const holdActive = b.status === "requested" && b.blocking && b.holdUntil && new Date(b.holdUntil).getTime() > Date.now();
+  // Abgelaufene Reservierungen gibt der Worker frei (blocking = false) und sendet booking.updated
+  const holdActive = b.status === "requested" && b.blocking && Boolean(b.holdUntil);
 
   const act = (action: BookingAction, counterStart?: string) =>
     start(async () => {

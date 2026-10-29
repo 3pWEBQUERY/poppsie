@@ -53,7 +53,7 @@ export default async function FeedPage(props: PageProps<"/feed">) {
             key={`${tab}:${tag ?? ""}`}
             scope={{ kind: "feed", tab, tag }}
             initial={page}
-            composer={{ canPost: Boolean(user), showVisibility: true, placeholder: tag ? `Etwas zu #${tag} schreiben …` : "Was gibt's Neues?" }}
+            composer={{ canPost: Boolean(user?.profileComplete), hint: user && !user.profileComplete ? "Stelle dein Profil fertig, um Beiträge zu schreiben." : undefined, showVisibility: true, placeholder: tag ? `Etwas zu #${tag} schreiben …` : "Was gibt's Neues?" }}
             emptyText={tag ? `Noch keine Beiträge mit #${tag}.` : "Noch keine Beiträge. Folge Profilen oder schreib den ersten Beitrag!"}
           />
         </div>
