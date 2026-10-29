@@ -5,6 +5,7 @@ import { clubLinks } from "@/db/schema";
 import type { ProfileCardData } from "@/components/shared/profile-card";
 import type { SessionUser } from "@/lib/auth/session";
 import { findCity } from "@/lib/geo/cities";
+import { CLUB_TYPES, labelOf } from "@/lib/profile/fields";
 import { clubCard, escortCard, withFavorites } from "@/lib/search/cards";
 import { searchClubs } from "@/lib/search/clubs";
 import { searchEscorts } from "@/lib/search/escorts";
@@ -65,7 +66,7 @@ export async function findMatches(viewer: SessionUser, criteria: Criteria, q: Ma
         const b = best.get(r.id)!;
         const card = clubCard(r, viewer, "matches");
         return {
-          card: { ...card, matchScore: b.score, subtitle: `${card.subtitle} · ${b.count} passende ${b.count === 1 ? "Escort" : "Escorts"}` },
+          card: { ...card, matchScore: b.score, subtitle: `${labelOf(CLUB_TYPES, r.clubType)} · ${b.count} ${b.count === 1 ? "Match" : "Matches"} im Line-up` },
           score: b.score,
           distance: r.distanceKm,
           rating: r.ratingAvg,

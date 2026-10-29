@@ -1,76 +1,13 @@
 "use client";
 
 import { BadgeCheck, CalendarCheck, CircleDot, Sparkles } from "lucide-react";
-import { MultiSelect, type SelectOption } from "@/components/shared/select/select";
+import { MultiSelect } from "@/components/shared/select/select";
 import { StarRating } from "@/components/shared/star-rating";
-import {
-  BREAST_TYPES,
-  CLOTHING_SIZES,
-  CLOTHING_STYLES,
-  CUP_SIZES,
-  EYE_COLORS,
-  GENDERS,
-  HAIR_COLORS,
-  INTIMATE,
-  PIERCINGS,
-  SHOE_SIZES,
-  TATTOOS,
-} from "@/lib/profile/fields";
 import { RANGES, type EscortFilters, type EscortListKey, type RangeKey } from "@/lib/search/filters";
 import { Field, FilterSection, RangeField, Segmented, TogglePill } from "./fields";
-import { languageSelectOptions, nationalityOptions, SERVICE_OPTIONS } from "./options";
+import { LIST_LABELS, listOptions } from "./list-options";
 
 type Props = { value: EscortFilters; onChange: (next: EscortFilters) => void };
-
-const LIST_LABELS: Record<EscortListKey, string> = {
-  geschlecht: "Geschlecht",
-  nat: "Nationalität",
-  sprachen: "Sprachen",
-  cup: "Körbchengrösse",
-  brust: "Brusttyp",
-  intim: "Intimbereich",
-  piercings: "Piercings",
-  tattoos: "Tätowierungen",
-  stil: "Kleidungsstil",
-  kleidung: "Kleidergrösse",
-  schuhe: "Schuhgrösse",
-  haare: "Haarfarbe",
-  augen: "Augenfarbe",
-  services: "Services",
-};
-
-function optionsFor(key: EscortListKey): { options: SelectOption[]; searchable?: boolean } {
-  switch (key) {
-    case "geschlecht":
-      return { options: GENDERS };
-    case "nat":
-      return { options: nationalityOptions(), searchable: true };
-    case "sprachen":
-      return { options: languageSelectOptions(), searchable: true };
-    case "cup":
-      return { options: CUP_SIZES };
-    case "brust":
-      return { options: BREAST_TYPES };
-    case "intim":
-      return { options: INTIMATE };
-    case "piercings":
-      return { options: PIERCINGS };
-    case "tattoos":
-      return { options: TATTOOS };
-    case "stil":
-      return { options: CLOTHING_STYLES };
-    case "kleidung":
-      return { options: CLOTHING_SIZES };
-    case "schuhe":
-      return { options: SHOE_SIZES };
-    case "haare":
-      return { options: HAIR_COLORS };
-    case "augen":
-      return { options: EYE_COLORS };
-    case "services":
-      return { options: SERVICE_OPTIONS, searchable: true };
-  }
-}
 
 const RANGE_META: Record<RangeKey, { label: string; unit: string; step?: number }> = {
   alter: { label: "Alter", unit: "" },
@@ -82,7 +19,7 @@ const RANGE_META: Record<RangeKey, { label: string; unit: string; step?: number 
 export function EscortFilterFields({ value: f, onChange }: Props) {
   const set = <K extends keyof EscortFilters>(k: K, v: EscortFilters[K]) => onChange({ ...f, [k]: v, seite: 1 });
   const list = (k: EscortListKey) => {
-    const o = optionsFor(k);
+    const o = listOptions(k);
     return (
       <Field key={k} label={LIST_LABELS[k]}>
         <MultiSelect

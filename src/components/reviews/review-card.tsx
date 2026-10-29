@@ -61,7 +61,7 @@ export function ReviewCard({ item, viewer, criteria, showTarget = false }: { ite
 
   return (
     <article className="flex flex-col gap-3 rounded-lg border bg-card p-4 sm:p-5" id={`bericht-${item.id}`}>
-      <header className="flex gap-3">
+      <header className="flex items-start gap-3">
         <UserAvatar user={author} size="md" link />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -145,7 +145,7 @@ export function ReviewCard({ item, viewer, criteria, showTarget = false }: { ite
       {item.comments.length > 0 && (
         <ul className="ml-4 flex flex-col gap-2 sm:ml-10">
           {item.comments.map((c) => (
-            <li key={c.id} className="flex gap-2 text-sm">
+            <li key={c.id} className="flex items-start gap-2 text-sm">
               <UserAvatar user={c.author ?? fallbackUser} size="xs" link />
               <div className="min-w-0 rounded-md bg-muted px-3 py-2">
                 <span className="text-xs font-semibold">{c.author?.name ?? fallbackUser.name}</span>
@@ -191,7 +191,7 @@ export function ReviewCard({ item, viewer, criteria, showTarget = false }: { ite
 function OwnerReply({ reply }: { reply: ReplyItem }) {
   const a = reply.author ?? fallbackUser;
   return (
-    <div className="ml-4 flex gap-3 border-l-2 border-primary pl-4 sm:ml-10">
+    <div className="ml-4 flex items-start gap-3 border-l-2 border-primary pl-4 sm:ml-10">
       <UserAvatar user={a} size="sm" link />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2">

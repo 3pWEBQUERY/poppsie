@@ -185,3 +185,16 @@ export async function membersToRate(providerId: string) {
   return rows.map((r) => people.get(r.memberId)).filter((x): x is UserSummary => Boolean(x));
 }
 
+
+/** Erledigte Buchungen eines Mitglieds ohne Bericht (Einladungen). */
+export async function pendingReviewInvites(memberId: string) {
+  const used = db.select({ id: reviews.bookingId }).from(reviews).where(and(eq(reviews.authorId, memberId), sql`${reviews.bookingId} IS NOT NULL`));
+  const rows = await db
+    .select({ id: bookings.id, escortId: bookings.escortId, during: bookings.during })
+    .from(bookings)
+    .where(and(eq(bookings.memberId, memberId), eq(bookings.status, "completed"), notInArray(bookings.id, used)))
+    .orderBy(desc(bookings.updatedAt))
+    .limit(10);
+  const people = await getSummaries(rows.map((r) => r.escortId), { id: memberId });
+  return rows.map((r) => ({ id: r.id, during: r.during, escort: people.get(r.escortId) ?? null }));
+}

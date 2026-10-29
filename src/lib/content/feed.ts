@@ -116,3 +116,12 @@ export async function countNewer(viewer: SessionUser | null, countries: string[]
     );
   return n;
 }
+
+/** Beliebte Hashtags der letzten 7 Tage (öffentliche Feed-Beiträge). */
+export async function trendingTags(limit = 10) {
+  const res = await db.execute<{ tag: string; n: number }>(sql`
+    SELECT t AS tag, count(*)::int AS n FROM posts, unnest(hashtags) t
+    WHERE context = 'feed' AND visibility = 'public' AND approved AND NOT is_draft AND deleted_at IS NULL AND created_at > now() - interval '7 days'
+    GROUP BY t ORDER BY n DESC, t LIMIT ${limit}`);
+  return res.rows;
+}

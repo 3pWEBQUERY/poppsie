@@ -319,6 +319,7 @@ export function Composer({
       <input
         ref={fileInput}
         type="file"
+        aria-label="Anhänge auswählen"
         hidden
         multiple
         accept={ACCEPT}

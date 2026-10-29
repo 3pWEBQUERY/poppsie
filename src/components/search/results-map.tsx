@@ -52,7 +52,7 @@ function FitBounds({ groups, origin, radiusKm }: { groups: Group[]; origin: { la
 
 function MiniCard({ c }: { c: ProfileCardData }) {
   return (
-    <Link href={c.href} className="flex items-center gap-2.5 rounded-md p-1.5 text-foreground no-underline hover:bg-secondary">
+    <Link href={c.href} className="flex items-center gap-2.5 rounded-md p-1.5 text-foreground! no-underline hover:bg-secondary">
       {c.imageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={c.imageUrl} alt="" className="size-12 shrink-0 rounded-md object-cover" />
@@ -84,7 +84,7 @@ export default function ResultsMap({ points, origin, radiusKm }: { points: MapPo
   const groups = useMemo(() => groupPoints(points), [points]);
   return (
     <div
-      className="h-[70vh] min-h-[420px] overflow-hidden rounded-lg border bg-muted [&_.leaflet-bar]:shadow-none [&_.leaflet-container]:bg-muted [&_.leaflet-container]:font-sans [&_.leaflet-control-attribution]:bg-background/80 [&_.leaflet-control-attribution]:text-[10px] [&_.leaflet-control-attribution]:text-muted-foreground [&_.leaflet-control-attribution_a]:text-muted-foreground [&_.leaflet-popup-content]:m-1.5 [&_.leaflet-popup-content-wrapper]:rounded-lg [&_.leaflet-popup-content-wrapper]:border [&_.leaflet-popup-content-wrapper]:bg-popover [&_.leaflet-popup-content-wrapper]:text-foreground [&_.leaflet-popup-content-wrapper]:shadow-none [&_.leaflet-popup-tip]:bg-popover [&_.leaflet-popup-tip]:shadow-none [&_.leaflet-tile]:[filter:invert(1)_hue-rotate(180deg)_brightness(0.85)_contrast(0.9)]"
+      className="h-[70vh] min-h-[420px] overflow-hidden rounded-lg border bg-muted [&_.leaflet-bar]:shadow-none! [&_.leaflet-bar]:border-border! [&_.leaflet-bar_a]:bg-popover! [&_.leaflet-bar_a]:text-foreground! [&_.leaflet-bar_a]:border-border! [&_.leaflet-container]:bg-muted! [&_.leaflet-container]:font-sans! [&_.leaflet-control-attribution]:bg-background/80! [&_.leaflet-control-attribution]:text-[10px]! [&_.leaflet-control-attribution]:text-muted-foreground! [&_.leaflet-control-attribution_a]:text-muted-foreground! [&_.leaflet-popup-content]:m-1.5! [&_.leaflet-popup-content-wrapper]:rounded-lg! [&_.leaflet-popup-content-wrapper]:border! [&_.leaflet-popup-content-wrapper]:bg-popover! [&_.leaflet-popup-content-wrapper]:text-foreground! [&_.leaflet-popup-content-wrapper]:shadow-none! [&_.leaflet-popup-tip]:bg-popover! [&_.leaflet-popup-tip]:shadow-none! [&_.leaflet-tile]:[filter:invert(1)_hue-rotate(180deg)_brightness(0.85)_contrast(0.9)]! [&_.leaflet-popup-close-button]:text-muted-foreground!"
     >
       <MapContainer center={origin ? [origin.lat, origin.lng] : SWISS_CENTER} zoom={origin ? 10 : 7} scrollWheelZoom className="size-full">
         <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />

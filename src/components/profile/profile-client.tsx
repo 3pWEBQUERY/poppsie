@@ -69,3 +69,30 @@ export function ProfileTabs({ tabs, className }: { tabs: { value: string; label:
     </Tabs>
   );
 }
+
+/**
+ * Sticky Infospalte: ist sie höher als das Fenster, klebt sie mit ihrer Unterkante,
+ * sonst oben (unter dem Header). So bleibt jeder Teil erreichbar.
+ */
+export function StickyAside({ children, className }: { children: React.ReactNode; className?: string }) {
+  const ref = useRef<HTMLElement>(null);
+  const [top, setTop] = useState(96);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const update = () => setTop(Math.min(96, window.innerHeight - el.offsetHeight - 16));
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    window.addEventListener("resize", update);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", update);
+    };
+  }, []);
+  return (
+    <aside ref={ref} style={{ "--aside-top": `${top}px` } as React.CSSProperties} className={cn("lg:sticky lg:top-[var(--aside-top)] lg:self-start", className)}>
+      {children}
+    </aside>
+  );
+}

@@ -189,7 +189,7 @@ export async function searchEscorts(f: EscortFilters, ctx: ViewerContext, opts: 
     .limit(opts.limit ?? 24)
     .offset(opts.offset ?? 0);
 
-  const items: EscortRow[] = rows.map(({ avatarBlur, profileBlur, total: _t, ...r }) => ({
+  const items: EscortRow[] = rows.map(({ avatarBlur, profileBlur, ...r }) => ({
     ...r,
     ratingAvg: Number(r.ratingAvg),
     distanceKm: r.distanceKm == null ? null : Number(r.distanceKm),

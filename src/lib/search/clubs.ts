@@ -117,7 +117,7 @@ export async function searchClubs(f: ClubFilters, ctx: ViewerContext, opts: Sear
     .limit(opts.limit ?? 24)
     .offset(opts.offset ?? 0);
 
-  const items: ClubRow[] = rows.map(({ logoMediaId, logoBlur, avatarMediaId, avatarBlur, profileBlur, total: _t, ...r }) => ({
+  const items: ClubRow[] = rows.map(({ logoMediaId, logoBlur, avatarMediaId, avatarBlur, profileBlur, ...r }) => ({
     ...r,
     ratingAvg: Number(r.ratingAvg),
     distanceKm: r.distanceKm == null ? null : Number(r.distanceKm),

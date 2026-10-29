@@ -9,8 +9,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const status = await recomputeProfile(user.id);
   const complete = status?.complete ?? user.profileComplete;
   return (
-    <div className="mx-auto grid max-w-6xl gap-6 px-4 py-6 lg:grid-cols-[230px_1fr]">
-      <aside>
+    <div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 px-4 py-6 lg:grid-cols-[230px_1fr]">
+      <aside className="min-w-0">
         <DashboardSidebar items={navFor(user.accountType)} complete={complete} />
       </aside>
       <div className="min-w-0">

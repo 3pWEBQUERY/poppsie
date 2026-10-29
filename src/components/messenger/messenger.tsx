@@ -203,7 +203,7 @@ export function Messenger({ me, initialList, initialThread, draft: initialDraft,
   const initialFor = activeId ? (preload[activeId] ?? null) : draft ? { meta: draft, page: { messages: [], nextCursor: null } } : null;
 
   return (
-    <div className="flex h-[calc(100dvh-9.5rem)] min-h-[460px] overflow-hidden rounded-lg border bg-card">
+    <div className="flex h-[calc(100dvh-12.5rem)] min-h-[420px] lg:h-[calc(100dvh-9rem)] overflow-hidden rounded-lg border bg-card">
       <aside className={cn("w-full shrink-0 border-r md:w-[300px] lg:w-[320px]", showThread ? "hidden md:block" : "block")}>
         <ConversationList items={list} activeId={activeId} typing={typing} tab={tab} onTab={setTab} onSelect={select} onFlag={flagFromList} />
       </aside>

@@ -8,7 +8,7 @@ import { UserAvatar } from "@/components/shared/user-avatar";
 import { ReviewSection } from "@/components/reviews/review-section";
 import { ProfileStories } from "@/components/stories/profile-stories";
 import { ProfileActions } from "@/components/profile/profile-actions";
-import { ProfileTabs, VisitTracker } from "@/components/profile/profile-client";
+import { ProfileTabs, StickyAside, VisitTracker } from "@/components/profile/profile-client";
 import { ProfileGallery } from "@/components/profile/profile-gallery";
 import { ChipList, FactsList, HoursList, Panel, PriceTable, rulesToHours, type Fact } from "@/components/profile/profile-parts";
 import { PreviewNotice } from "@/components/profile/preview-notice";
@@ -152,7 +152,7 @@ export default async function EscortProfilePage(props: PageProps<"/escort/[usern
           </div>
         </div>
 
-        <aside className="flex flex-col gap-4 lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:self-start lg:overflow-y-auto lg:[scrollbar-width:thin]">
+        <StickyAside className="flex flex-col gap-4">
           <section className="flex flex-col gap-4 rounded-lg border bg-card p-4">
             <div className="flex items-center gap-3">
               <UserAvatar user={{ name, avatarUrl: d.avatarUrl, online: d.online }} size="md" ring={d.hasStory ? "story" : undefined} />
@@ -198,7 +198,7 @@ export default async function EscortProfilePage(props: PageProps<"/escort/[usern
           <Panel title="Arbeitszeiten">
             <HoursList hours={rulesToHours(d.rules)} emptyText="Termine nach Vereinbarung." />
           </Panel>
-        </aside>
+        </StickyAside>
       </div>
     </div>
   );

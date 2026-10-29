@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { conversationMembers, media, messageAttachments, messages } from "@/db/schema";
+import { isStaff } from "@/lib/auth/guards";
 import { getSessionUser } from "@/lib/auth/session";
 import { verifyMediaSig } from "@/lib/media/urls";
 import { presignedGet, readLocal, usesBucket } from "@/lib/storage";
@@ -17,13 +18,16 @@ export async function GET(req: Request, ctx: RouteContext<"/api/media/[id]/[vari
   if (req.headers.get("sec-fetch-site") === "cross-site") return new Response("Hotlinking nicht erlaubt", { status: 403 });
 
   const [m] = await db.select().from(media).where(eq(media.id, id));
-  if (!m || m.status === "rejected") return new Response("Nicht gefunden", { status: 404 });
+  if (!m) return new Response("Nicht gefunden", { status: 404 });
   const viewer = await getSessionUser();
+  // Moderation (Admin/Moderator) darf alle Medien sehen: gemeldete Inhalte, abgelehnte Medien, Verifikations-Selfies.
+  const staff = isStaff(viewer);
+  if (m.status === "rejected" && !staff) return new Response("Nicht gefunden", { status: 404 });
 
   // Gäste erhalten bei aktivem Blur nie das Original.
   if (!viewer && m.blurForGuests && variant !== "b") return new Response("Nur für Mitglieder", { status: 403 });
 
-  if (m.purpose === "message") {
+  if (m.purpose === "message" && !staff) {
     if (!viewer) return new Response("Nicht erlaubt", { status: 403 });
     const rows = await db
       .select({ viewOnce: messageAttachments.viewOnce, viewedAt: messageAttachments.viewedAt, senderId: messages.senderId, messageId: messages.id })
@@ -41,7 +45,7 @@ export async function GET(req: Request, ctx: RouteContext<"/api/media/[id]/[vari
   }
 
   const key = (m[KEYS[variant as keyof typeof KEYS]] as string | null) ?? m.storageKey;
-  const headers = { "Cache-Control": m.purpose === "message" ? "private, no-store" : "private, max-age=300", "X-Content-Type-Options": "nosniff" };
+  const headers = { "Cache-Control": m.purpose === "message" || staff ? "private, no-store" : "private, max-age=300", "X-Content-Type-Options": "nosniff" };
   if (usesBucket) {
     const signed = await presignedGet(key, 600, m.kind === "file" ? (m.fileName ?? "datei.pdf") : undefined);
     return Response.redirect(signed!, 302);

@@ -11,7 +11,8 @@ export function MainNav({ links }: { links: { href: string; label: string }[] })
   const isActive = (href: string) => {
     if (href.includes("?")) return current === href;
     if (href === "/dashboard") return pathname === "/dashboard";
-    return pathname === href || (pathname.startsWith(href + "/") && href !== "/") || (href === "/suche" && pathname === "/suche" && !params.get("typ"));
+    if (href === "/suche") return pathname === "/suche" && !params.get("typ");
+    return pathname === href || (pathname.startsWith(href + "/") && href !== "/");
   };
   return (
     <nav className="mx-auto flex h-9 max-w-6xl items-center gap-6 overflow-x-auto px-4 text-xs font-medium [scrollbar-width:none]">
