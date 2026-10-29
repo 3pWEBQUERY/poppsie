@@ -96,3 +96,13 @@ export function ageFrom(birthDate: string | null | undefined, now = new Date()) 
   if (now.getMonth() + 1 < m || (now.getMonth() + 1 === m && now.getDate() < d)) age--;
   return age;
 }
+
+/** «vor 5 Min.», «vor 3 Std.», «vor 2 Tagen». */
+export function timeAgo(d: Date | string, now = Date.now()) {
+  const s = Math.max(0, Math.round((now - new Date(d).getTime()) / 1000));
+  if (s < 60) return "gerade eben";
+  if (s < 3600) return `vor ${Math.floor(s / 60)} Min.`;
+  if (s < 86400) return `vor ${Math.floor(s / 3600)} Std.`;
+  const days = Math.floor(s / 86400);
+  return days === 1 ? "vor 1 Tag" : `vor ${days} Tagen`;
+}

@@ -5,7 +5,8 @@ import { and, eq, gt, isNull, or } from "drizzle-orm";
 import { db } from "@/db";
 import { passwordResets, users } from "@/db/schema";
 import { randomToken, sha256 } from "@/lib/auth/crypto";
-import { ApiError, run } from "@/lib/auth/guards";
+import { checkStoredTotp, restoreAfterDeletionRequest } from "@/lib/account/restore";
+import { ApiError, run, type ActionResult } from "@/lib/auth/guards";
 import { hashPassword, pwnedCount, verifyPassword } from "@/lib/auth/password";
 import { createSession, destroyAllSessions, destroySession } from "@/lib/auth/session";
 import { passwordStrength } from "@/lib/auth/strength";
@@ -20,8 +21,11 @@ import { clientIp } from "@/lib/request";
 let dummyHash: Promise<string> | null = null;
 const getDummyHash = () => (dummyHash ??= hashPassword(randomToken(16)));
 
-export async function login(input: { identifier: string; password: string; next?: string | null }) {
-  return run(async () => {
+export type LoginResult = ActionResult<{ redirect: string }> | { ok: false; code: "TOTP_REQUIRED"; status: 401; error: string };
+
+/** Login. Mit aktivierter 2FA ohne (gültigen) Code: Fehlercode TOTP_REQUIRED, das Formular zeigt das Code-Feld. */
+export async function login(input: { identifier: string; password: string; otp?: string; next?: string | null }): Promise<LoginResult> {
+  const res = await run(async () => {
     const ip = await clientIp();
     const id = input.identifier.trim().toLowerCase();
     await limitOrThrow(`login-ip:${ip}`, 30, 900, "Zu viele Anmeldeversuche. Bitte warte 15 Minuten.");
@@ -36,9 +40,14 @@ export async function login(input: { identifier: string; password: string; next?
     if (user.status === "suspended" && (!user.suspendedUntil || user.suspendedUntil > new Date())) {
       throw new ApiError("FORBIDDEN", user.suspendedUntil ? `Dein Konto ist gesperrt bis ${user.suspendedUntil.toLocaleDateString("de-CH")}.` : "Dein Konto ist gesperrt.");
     }
+    if (user.totpSecret) {
+      const otp = input.otp?.replace(/\s/g, "") ?? "";
+      if (!otp) return { totp: "missing" as const };
+      if (!checkStoredTotp(user.totpSecret, otp)) return { totp: "invalid" as const };
+    }
     if (user.deletionRequestedAt) {
       // Anmeldung innerhalb der Löschfrist stellt das Konto wieder her
-      await db.update(users).set({ deletionRequestedAt: null }).where(eq(users.id, user.id));
+      await restoreAfterDeletionRequest(user.id);
     }
     if (env.adminUsername && user.username === env.adminUsername && user.role !== "admin") {
       await db.update(users).set({ role: "admin" }).where(eq(users.id, user.id));
@@ -47,6 +56,15 @@ export async function login(input: { identifier: string; password: string; next?
     const next = input.next && input.next.startsWith("/") && !input.next.startsWith("//") ? input.next : "/dashboard";
     return { redirect: next };
   });
+  if (res.ok && "totp" in res.data) {
+    return {
+      ok: false,
+      code: "TOTP_REQUIRED",
+      status: 401,
+      error: res.data.totp === "invalid" ? "Der Code ist ungültig. Bitte versuche es erneut." : "Bitte gib den Code aus deiner Authenticator-App ein.",
+    };
+  }
+  return res as ActionResult<{ redirect: string }>;
 }
 
 export async function logout() {

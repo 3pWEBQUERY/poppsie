@@ -24,8 +24,10 @@ export function citySelectOptions() {
       label: c.name,
       group: c.country === "CH" ? (CANTON_NAMES[c.region as keyof typeof CANTON_NAMES] ?? c.region) : countryName(c.country),
       flag: c.country === "CH" ? undefined : c.country,
+      ch: c.country === "CH" ? 0 : 1,
     }))
-    .sort((a, b) => a.group.localeCompare(b.group, "de") || a.label.localeCompare(b.label, "de")));
+    .sort((a, b) => a.ch - b.ch || a.group.localeCompare(b.group, "de") || a.label.localeCompare(b.label, "de"))
+    .map((o) => ({ value: o.value, label: o.label, group: o.group, flag: o.flag })));
 }
 
 export const CANTON_OPTIONS: SelectOption[] = SWISS_CANTONS.map((c) => ({ value: c, label: CANTON_NAMES[c] })).sort((a, b) => a.label.localeCompare(b.label, "de"));

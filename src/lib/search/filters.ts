@@ -241,7 +241,7 @@ export function toQueryRecord(f: SearchFilters): Record<string, string> {
 }
 
 export function searchHref(f: SearchFilters, opts: { keepPage?: boolean } = {}) {
-  const qs = toSearchParams(f, opts).toString();
+  const qs = toSearchParams(f, opts).toString().replace(/%2C/g, ",");
   return qs ? `/suche?${qs}` : "/suche";
 }
 

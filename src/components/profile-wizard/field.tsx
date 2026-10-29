@@ -83,7 +83,7 @@ export function TextField({
         disabled={disabled}
         aria-invalid={Boolean(error)}
         onChange={(e) => onChange(e.target.value === "" ? null : e.target.value)}
-        className="h-9"
+       
       />
     </Field>
   );
@@ -131,7 +131,7 @@ export function NumberField({
             const v = e.target.value;
             onChange(v === "" ? null : Number(v));
           }}
-          className={cn("h-9", suffix && "pr-12")}
+          className={cn(suffix && "pr-12")}
         />
         {suffix && <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-muted-foreground">{suffix}</span>}
       </div>
