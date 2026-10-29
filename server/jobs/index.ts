@@ -1,10 +1,18 @@
 /**
  * Registry der Job-Handler (einmalige Jobs aus der Queue) und periodischen Aufgaben.
- * Module registrieren ihre Handler hier.
+ * Jedes Modul pflegt seine eigene Datei; hier wird nur zusammengeführt.
  */
-export type JobHandler = (payload: Record<string, unknown>) => Promise<void>;
-export type Periodic = { name: string; everyMs: number; run: () => Promise<void> };
+import * as account from "./account";
+import * as analytics from "./analytics";
+import * as bookings from "./bookings";
+import * as planner from "./planner";
+import * as savedSearches from "./saved-searches";
+import type { JobHandler, Periodic } from "./types";
 
-export const HANDLERS: Record<string, JobHandler> = {};
+export type { JobHandler, Periodic } from "./types";
 
-export const PERIODIC: Periodic[] = [];
+const modules = [account, analytics, bookings, planner, savedSearches];
+
+export const HANDLERS: Record<string, JobHandler> = Object.assign({}, ...modules.map((m) => m.handlers));
+
+export const PERIODIC: Periodic[] = modules.flatMap((m) => m.periodic);
