@@ -37,7 +37,10 @@ export function WeekCalendar({
 }) {
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   const today = localDate(new Date(), timezone);
-  const visible = bookings.filter((b) => !HIDDEN.has(b.status));
+  // Gegenvorschläge an der vorgeschlagenen Zeit zeigen
+  const visible = bookings
+    .filter((b) => !HIDDEN.has(b.status))
+    .map((b) => (b.status === "countered" && b.counterStart && b.counterEnd ? { ...b, start: b.counterStart, end: b.counterEnd } : b));
 
   // Sichtbarer Stundenbereich: aus Regeln und Buchungen, mindestens 10–22 Uhr
   let minH = 10;
