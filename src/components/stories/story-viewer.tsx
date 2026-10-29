@@ -28,12 +28,11 @@ export function StoryViewer({ queue, start = 0, onClose, viewerId, onSeen }: { q
   const [ai, setAi] = useState(start);
   const [si, setSi] = useState(0);
   const [cache, setCache] = useState<Record<string, StoryView[] | "error">>({});
-  const [progress, setProgress] = useState(0);
+  const [prog, setProg] = useState({ id: "", p: 0 });
   const [held, setHeld] = useState(false);
   const [userPaused, setUserPaused] = useState(false);
   const [sheet, setSheet] = useState(false);
   const [muted, setMuted] = useState(true);
-  const [mounted, setMounted] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const startedAt = useRef(0);
   const elapsed = useRef(0);
@@ -47,8 +46,6 @@ export function StoryViewer({ queue, start = 0, onClose, viewerId, onSeen }: { q
   const stories = Array.isArray(list) ? list : null;
   const story = stories?.[si] ?? null;
   const paused = held || userPaused || sheet;
-
-  useEffect(() => setMounted(true), []);
 
   // Stories der aktuellen Autorin laden (und die nächste vorladen).
   const requested = useRef(new Set<string>());
@@ -90,10 +87,10 @@ export function StoryViewer({ queue, start = 0, onClose, viewerId, onSeen }: { q
   const storyId = story?.id;
   const storyKind = story?.kind;
   const storyAuthor = story?.authorId;
+  const progress = prog.id === storyId ? prog.p : 0;
   useEffect(() => {
     if (!storyId) return;
     elapsed.current = 0;
-    setProgress(0);
     if (!viewed.current.has(storyId)) {
       viewed.current.add(storyId);
       if (storyAuthor !== viewerId) void markStoryViewed(storyId);
@@ -110,7 +107,7 @@ export function StoryViewer({ queue, start = 0, onClose, viewerId, onSeen }: { q
       void v?.play().catch(() => {});
       let raf = 0;
       const tick = () => {
-        if (v && v.duration) setProgress(Math.min(1, v.currentTime / Math.min(v.duration, 30)));
+        if (v && v.duration) setProg({ id: storyId, p: Math.min(1, v.currentTime / Math.min(v.duration, 30)) });
         if (v && v.currentTime >= 30) return next();
         raf = requestAnimationFrame(tick);
       };
@@ -122,7 +119,7 @@ export function StoryViewer({ queue, start = 0, onClose, viewerId, onSeen }: { q
     const tick = () => {
       const p = (elapsed.current + performance.now() - startedAt.current) / IMAGE_MS;
       if (p >= 1) return next();
-      setProgress(p);
+      setProg({ id: storyId, p });
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
@@ -173,7 +170,7 @@ export function StoryViewer({ queue, start = 0, onClose, viewerId, onSeen }: { q
     } else updateStory({ reactions: res.data });
   };
 
-  if (!mounted || !src) return null;
+  if (!src || typeof document === "undefined") return null;
   const own = src.author.id === viewerId;
 
   return createPortal(

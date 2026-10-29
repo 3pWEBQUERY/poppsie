@@ -36,6 +36,7 @@ type Props = {
 export function MessageBubble({ m, mine, viewerId, tick, now, nameOf, highlighted, onReply, onEdit, onDelete, onReact, onJump, onRefresh }: Props) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [tapped, setTapped] = useState(false);
   const reportRef = useRef<HTMLButtonElement>(null);
   const deleted = Boolean(m.deletedAt);
 
@@ -65,6 +66,10 @@ export function MessageBubble({ m, mine, viewerId, tick, now, nameOf, highlighte
     <div id={`m-${m.id}`} className={cn("group flex w-full items-end gap-1", mine ? "flex-row-reverse" : "flex-row")}>
       <div className={cn("flex max-w-[85%] flex-col sm:max-w-[70%]", mine ? "items-end" : "items-start")}>
         <div
+          onClick={(e) => {
+            // Touch: Antippen zeigt die Aktionen (Desktop: Hover)
+            if (!(e.target as HTMLElement).closest("button, a, input, audio, video")) setTapped((t) => !t);
+          }}
           className={cn(
             "relative rounded-2xl px-3 py-2 text-sm break-words transition-colors",
             mine ? "rounded-br-md bg-primary text-white" : "rounded-bl-md bg-secondary text-foreground",
@@ -122,7 +127,12 @@ export function MessageBubble({ m, mine, viewerId, tick, now, nameOf, highlighte
       </div>
 
       {!deleted && (
-        <div className={cn("mb-1 flex shrink-0 items-center gap-0.5 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100", actionsVisible && "md:opacity-100")}>
+        <div
+          className={cn(
+            "mb-1 shrink-0 items-center gap-0.5",
+            actionsVisible || tapped ? "flex" : "hidden md:flex md:opacity-0 md:transition-opacity md:group-hover:opacity-100 md:focus-within:opacity-100",
+          )}
+        >
           <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
             <PopoverTrigger aria-label="Reagieren" className="rounded-full p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground">
               <SmilePlus className="size-4" />

@@ -47,13 +47,14 @@ export default async function SettingsPage() {
       .orderBy(desc(moderationActions.createdAt))
       .limit(50),
   ]);
+  const fmt = (d: Date) => d.toLocaleString("de-CH", { dateStyle: "medium", timeStyle: "short", timeZone: user.timezone || "Europe/Zurich" });
   const decisions: Decision[] = actions.map(({ action: a, appealStatus, appealAt }) => ({
     id: a.id,
     action: a.action,
     reason: a.reason,
-    until: a.until?.toISOString() ?? null,
-    createdAt: a.createdAt.toISOString(),
-    appeal: appealStatus && appealAt ? { status: appealStatus, createdAt: appealAt.toISOString() } : null,
+    until: a.until ? fmt(a.until) : null,
+    createdAt: fmt(a.createdAt),
+    appeal: appealStatus && appealAt ? { status: appealStatus, createdAt: fmt(appealAt) } : null,
     expired: appealWindowOver(a.createdAt),
   }));
   const sessionRows = sess
@@ -61,8 +62,8 @@ export default async function SettingsPage() {
       id: s.id,
       ip: s.ip,
       userAgent: s.userAgent,
-      createdAt: s.createdAt.toISOString(),
-      lastUsedAt: s.lastUsedAt.toISOString(),
+      createdAt: fmt(s.createdAt),
+      lastUsedAt: fmt(s.lastUsedAt),
       current: s.id === currentId,
     }))
     .sort((a, b) => Number(b.current) - Number(a.current));

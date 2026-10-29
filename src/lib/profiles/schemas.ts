@@ -161,7 +161,7 @@ export function clubDetailsSchema(fields: ClubFieldDef[]) {
         s = z.number({ error: "Bitte gib einen Betrag ein" }).min(0, "Betrag ungültig").max(100000, "Betrag zu hoch");
         break;
       case "boolean":
-        s = z.boolean();
+        s = z.boolean({ error: "Bitte wähle Ja oder Nein" });
         break;
       case "multiselect":
         s = z.array(f.options?.length ? z.enum(f.options as [string, ...string[]], { error: "Ungültige Auswahl" }) : z.string().max(60)).max(30);

@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { parse } from "./validate";
 import { ApiError, run } from "@/lib/auth/guards";
 import { getSessionUser, type SessionUser } from "@/lib/auth/session";
 import { canModerateGroup, canReadGroup, getMembership, groupById } from "@/lib/groups/access";
@@ -14,7 +15,7 @@ const ScopeInput = z.union([
 ]);
 
 async function resolveScope(viewer: SessionUser | null, raw: z.input<typeof ScopeInput>): Promise<FeedScope> {
-  const scope = ScopeInput.parse(raw);
+  const scope = parse(ScopeInput, raw);
   if (scope.kind === "feed") return scope;
   const g = await groupById(scope.groupId);
   if (!g) throw new ApiError("NOT_FOUND");
@@ -29,7 +30,7 @@ export async function loadFeed(input: { scope: z.input<typeof ScopeInput>; curso
     const viewer = await getSessionUser();
     if (viewer) await limitOrThrow(`feed:${viewer.id}`, 240, 60);
     const scope = await resolveScope(viewer, input.scope);
-    return feedPage(viewer, await viewerCountries(viewer), scope, z.string().max(400).parse(input.cursor));
+    return feedPage(viewer, await viewerCountries(viewer), scope, parse(z.string().max(400), input.cursor));
   });
 }
 
@@ -47,6 +48,6 @@ export async function countNewPosts(input: { scope: z.input<typeof ScopeInput>; 
     const viewer = await getSessionUser();
     if (viewer) await limitOrThrow(`feed-poll:${viewer.id}`, 30, 60);
     const scope = await resolveScope(viewer, input.scope);
-    return { count: await countNewer(viewer, await viewerCountries(viewer), scope, z.string().max(40).parse(input.since)) };
+    return { count: await countNewer(viewer, await viewerCountries(viewer), scope, parse(z.string().max(40), input.since)) };
   });
 }

@@ -76,6 +76,8 @@ export function Composer(props: Props) {
     try {
       const saved = localStorage.getItem(`pp:composer:${props.storageKey}`);
       if (saved) {
+        // Nach der Hydration aus dem lokalen Speicher übernehmen (externes System).
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setBody(saved);
         setExpanded(true);
       }

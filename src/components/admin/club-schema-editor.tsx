@@ -77,7 +77,7 @@ function SchemaForm({ schema }: { schema: Schema }) {
           <Input id={`label-${schema.clubType}`} value={label} onChange={(e) => setLabel(e.target.value)} className="w-56" />
         </div>
         <p className="text-xs text-muted-foreground">
-          Enum-Wert <code className="rounded bg-secondary px-1">{schema.clubType}</code> · zuletzt geändert {new Date(schema.updatedAt).toLocaleString("de-CH")}
+          Enum-Wert <code className="rounded bg-secondary px-1">{schema.clubType}</code> · zuletzt geändert {schema.updatedAt}
         </p>
       </div>
       <p className="text-xs text-muted-foreground">

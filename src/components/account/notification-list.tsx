@@ -123,7 +123,9 @@ export function NotificationList({ items }: { items: NotificationRow[] }) {
                   <span className="min-w-0 flex-1">
                     <span className={cn("block text-sm", !n.readAt ? "font-bold" : "font-medium")}>{n.title}</span>
                     {n.body && <span className="mt-0.5 line-clamp-3 block text-sm whitespace-pre-line text-muted-foreground">{n.body}</span>}
-                    <span className="mt-1 block text-[11px] text-muted-foreground">{when(n.createdAt)}</span>
+                    <span suppressHydrationWarning className="mt-1 block text-[11px] text-muted-foreground">
+                      {when(n.createdAt)}
+                    </span>
                   </span>
                   {!n.readAt && <span aria-label="Ungelesen" className="mt-2 size-2 shrink-0 rounded-full bg-primary" />}
                 </button>

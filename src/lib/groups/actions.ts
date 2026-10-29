@@ -3,6 +3,7 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { parse } from "@/lib/content/validate";
 import { db } from "@/db";
 import { forumCategories, groupMembers, groups, media, posts, users } from "@/db/schema";
 import { ApiError, isStaff, requireUser, run } from "@/lib/auth/guards";
@@ -36,7 +37,7 @@ async function assertCover(userId: string, id: string | null | undefined) {
 export async function createGroup(input: z.input<typeof GroupInput>) {
   return run(async () => {
     const user = await requireUser({ complete: true });
-    const data = GroupInput.parse(input);
+    const data = parse(GroupInput, input);
     await limitOrThrow(`group-create:${user.id}`, 5, 86400, "Du kannst höchstens 5 Gruppen pro Tag erstellen.");
     await assertCover(user.id, data.coverMediaId);
     const base = slugify(data.name) || "gruppe";
@@ -72,8 +73,8 @@ async function loadAdmin(user: SessionUser, groupId: string, level: "moderator" 
 export async function updateGroup(input: z.input<typeof GroupInput> & { groupId: string }) {
   return run(async () => {
     const user = await requireUser({ complete: true });
-    const groupId = z.uuid().parse(input.groupId);
-    const data = GroupInput.parse(input);
+    const groupId = parse(z.uuid(), input.groupId);
+    const data = parse(GroupInput, input);
     await writeLimit(user.id, "group-edit", 20);
     const { g } = await loadAdmin(user, groupId, "admin");
     await assertCover(user.id, data.coverMediaId && data.coverMediaId !== g.coverMediaId ? data.coverMediaId : null);
@@ -100,7 +101,7 @@ export async function joinGroup(groupId: string) {
   return run(async () => {
     const user = await requireUser({ complete: true });
     await writeLimit(user.id, "group-join", 20);
-    const g = await groupById(z.uuid().parse(groupId));
+    const g = await groupById(parse(z.uuid(), groupId));
     if (!g) throw new ApiError("NOT_FOUND");
     const m = await getMembership(g.id, user.id);
     if (m?.status === "banned") throw new ApiError("FORBIDDEN", "Du wurdest aus dieser Gruppe ausgeschlossen");
@@ -128,7 +129,7 @@ export async function joinGroup(groupId: string) {
 export async function leaveGroup(groupId: string) {
   return run(async () => {
     const user = await requireUser();
-    const g = await groupById(z.uuid().parse(groupId));
+    const g = await groupById(parse(z.uuid(), groupId));
     if (!g) throw new ApiError("NOT_FOUND");
     const m = await getMembership(g.id, user.id);
     if (!m) return { left: true };
@@ -145,7 +146,7 @@ export async function leaveGroup(groupId: string) {
 export async function inviteToGroup(input: { groupId: string; username: string }) {
   return run(async () => {
     const user = await requireUser({ complete: true });
-    const data = z.object({ groupId: z.uuid(), username: z.string().trim().toLowerCase().min(3).max(20) }).parse(input);
+    const data = parse(z.object({ groupId: z.uuid(), username: z.string().trim().toLowerCase().min(3).max(20) }), input);
     await limitOrThrow(`group-invite:${user.id}`, 50, 3600);
     const { g } = await loadAdmin(user, data.groupId, "moderator");
     const [target] = await db.select({ id: users.id }).from(users).where(and(eq(users.username, data.username.replace(/^@/, "")), eq(users.status, "active")));
@@ -192,7 +193,7 @@ const MemberAction = z.object({
 export async function manageMember(input: z.input<typeof MemberAction>) {
   return run(async () => {
     const user = await requireUser({ complete: true });
-    const data = MemberAction.parse(input);
+    const data = parse(MemberAction, input);
     await writeLimit(user.id, "group-manage", 120);
     const { g, m } = await loadAdmin(user, data.groupId, data.action === "role" ? "admin" : "moderator");
     const t = await targetMembership(g, data.userId, m, user);
@@ -229,7 +230,7 @@ export async function manageMember(input: z.input<typeof MemberAction>) {
 export async function transferOwnership(input: { groupId: string; userId: string }) {
   return run(async () => {
     const user = await requireUser({ complete: true });
-    const data = z.object({ groupId: z.uuid(), userId: z.uuid() }).parse(input);
+    const data = parse(z.object({ groupId: z.uuid(), userId: z.uuid() }), input);
     const { g } = await loadAdmin(user, data.groupId, "owner");
     const t = await getMembership(g.id, data.userId);
     if (t?.status !== "active") throw new ApiError("INVALID", "Nur an aktive Mitglieder übertragbar");
@@ -245,7 +246,7 @@ export async function transferOwnership(input: { groupId: string; userId: string
 export async function deleteGroup(groupId: string) {
   return run(async () => {
     const user = await requireUser({ complete: true });
-    const { g } = await loadAdmin(user, z.uuid().parse(groupId), "owner");
+    const { g } = await loadAdmin(user, parse(z.uuid(), groupId), "owner");
     await db.delete(groups).where(eq(groups.id, g.id));
     revalidatePath("/gruppen");
     return { ok: true };
@@ -256,7 +257,7 @@ export async function deleteGroup(groupId: string) {
 export async function reviewPost(input: { postId: string; approve: boolean }) {
   return run(async () => {
     const user = await requireUser({ complete: true });
-    const data = z.object({ postId: z.uuid(), approve: z.boolean() }).parse(input);
+    const data = parse(z.object({ postId: z.uuid(), approve: z.boolean() }), input);
     await writeLimit(user.id, "group-review", 120);
     const [p] = await db.select().from(posts).where(eq(posts.id, data.postId));
     if (!p?.groupId || p.isDraft) throw new ApiError("NOT_FOUND");

@@ -119,7 +119,7 @@ async function main() {
   ] as const;
   let parent: string | null = null;
   for (const [i, [by, body]] of chain.entries()) {
-    const [c] = await db
+    const [c]: { id: string }[] = await db
       .insert(comments)
       .values({ postId: hotel, parentId: parent, depth: i, authorId: u[by]!, body, createdAt: ago(19 - i) })
       .returning({ id: comments.id });

@@ -2,6 +2,7 @@
 
 import { and, asc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
+import { parse } from "./validate";
 import { db } from "@/db";
 import { comments, media, posts } from "@/db/schema";
 import { ApiError, isStaff, requireUser, run } from "@/lib/auth/guards";
@@ -59,7 +60,7 @@ async function hydrate(rows: Row[], viewer: SessionUser | null, opts: { adultOnl
 export async function loadComments(postId: string) {
   return run(async (): Promise<CommentView[]> => {
     const viewer = await getSessionUser();
-    const p = await getPost(z.uuid().parse(postId));
+    const p = await getPost(parse(z.uuid(), postId));
     if (!p) throw new ApiError("NOT_FOUND");
     const countries = await viewerCountries(viewer);
     const a = await postAccess(viewer, p, countries);
@@ -90,7 +91,7 @@ const AddInput = z.object({
 export async function addComment(input: z.input<typeof AddInput>) {
   return run(async (): Promise<CommentView> => {
     const user = await requireUser({ complete: true });
-    const data = AddInput.parse(input);
+    const data = parse(AddInput, input);
     await writeLimit(user.id, "comment", 20);
     if (!data.body && !data.mediaId) throw new ApiError("INVALID", "Der Kommentar ist leer");
     const p = await getPost(data.postId);
@@ -138,7 +139,7 @@ export async function addComment(input: z.input<typeof AddInput>) {
 export async function editComment(input: { id: string; body: string }) {
   return run(async (): Promise<CommentView> => {
     const user = await requireUser({ complete: true });
-    const data = z.object({ id: z.uuid(), body: z.string().trim().min(1, "Der Kommentar ist leer").max(MAX_COMMENT) }).parse(input);
+    const data = parse(z.object({ id: z.uuid(), body: z.string().trim().min(1, "Der Kommentar ist leer").max(MAX_COMMENT) }), input);
     await writeLimit(user.id, "comment-edit", 30);
     const countries = await viewerCountries(user);
     const a = await commentAccess(user, data.id, countries);
@@ -155,7 +156,7 @@ export async function deleteComment(id: string) {
     const user = await requireUser({ complete: true });
     await writeLimit(user.id, "comment-delete", 30);
     const countries = await viewerCountries(user);
-    const a = await commentAccess(user, z.uuid().parse(id), countries);
+    const a = await commentAccess(user, parse(z.uuid(), id), countries);
     if (!a.comment) throw new ApiError("NOT_FOUND");
     if (a.comment.authorId !== user.id && !a.moderator && !isStaff(user)) throw new ApiError("FORBIDDEN", "Keine Berechtigung");
     await db.update(comments).set({ deletedAt: new Date() }).where(eq(comments.id, a.comment.id));

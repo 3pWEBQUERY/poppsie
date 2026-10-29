@@ -24,17 +24,15 @@ export function Attachments({ messageId, items, mine, onViewed }: { messageId: s
               key={a.mediaId}
               type="button"
               onClick={() => setOpen(i)}
-              className={cn("relative overflow-hidden rounded-md bg-black/30", visual.length === 1 ? "max-h-72" : "aspect-square")}
+              style={visual.length === 1 ? { aspectRatio: ratio(a) } : undefined}
+              className={cn("relative block overflow-hidden rounded-md bg-black/30", visual.length === 1 ? "max-h-80 w-64 max-w-full" : "aspect-square w-32 max-w-full")}
               aria-label={a.kind === "image" ? "Bild öffnen" : "Video abspielen"}
             >
-              {a.kind === "image" ? (
+              {a.kind === "image" || a.thumbUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={a.thumbUrl ?? a.url ?? ""} alt="" loading="lazy" className={cn("size-full object-cover", visual.length === 1 && "max-h-72 w-auto max-w-full")} />
-              ) : a.thumbUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={a.thumbUrl} alt="" loading="lazy" className="size-full object-cover" />
+                <img src={a.thumbUrl ?? a.url ?? ""} alt="" loading="lazy" draggable={false} className="size-full object-cover" />
               ) : (
-                <video src={a.url ?? undefined} preload="metadata" muted playsInline className={cn("size-full object-cover", visual.length === 1 && "max-h-72")} />
+                <video src={a.url ?? undefined} preload="metadata" muted playsInline className="size-full object-cover" />
               )}
               {a.kind === "video" && (
                 <span className="absolute inset-0 flex items-center justify-center">
@@ -80,6 +78,12 @@ export function Attachments({ messageId, items, mine, onViewed }: { messageId: s
       {open !== null && <Lightbox items={lightbox} index={open} onClose={() => setOpen(null)} />}
     </div>
   );
+}
+
+/** Seitenverhältnis für die Vorschau (begrenzt, damit sehr hohe Bilder nicht den Chat füllen). */
+function ratio(a: AttachmentView) {
+  if (!a.width || !a.height) return a.kind === "video" ? "16 / 9" : "4 / 3";
+  return String(Math.min(2, Math.max(0.6, a.width / a.height)));
 }
 
 /** Einmal-Medium für Empfänger: wird erst beim Antippen geladen (danach serverseitig gesperrt). */

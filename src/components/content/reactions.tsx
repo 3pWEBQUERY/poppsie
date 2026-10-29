@@ -71,7 +71,7 @@ export function ReactionButton({
   };
 
   const mine = value.mine;
-  const label = mine ? LABEL[mine] : variant === "danke" ? "Danke" : "Gefällt mir";
+  const label = variant === "danke" && (!mine || mine === "like") ? "Danke" : mine ? LABEL[mine] : "Gefällt mir";
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverAnchor asChild>

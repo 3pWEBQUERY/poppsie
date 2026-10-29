@@ -51,6 +51,7 @@ function SelectBox({ selected, onSelect, className }: { selected: boolean; onSel
       aria-label="Auswählen"
       onClick={(e) => {
         e.preventDefault();
+        e.stopPropagation();
         onSelect();
       }}
       className={cn("flex size-5 shrink-0 items-center justify-center rounded-full border-2", selected ? "border-primary bg-primary" : "border-white/70 bg-black/40", className)}
@@ -95,13 +96,13 @@ export function FavoriteCard(p: ItemProps) {
         ) : (
           <span className="flex size-full items-center justify-center font-display text-4xl font-bold text-muted-foreground">{item.name.slice(0, 1)}</span>
         )}
-        <SelectBox selected={p.selected} onSelect={p.onSelect} className="absolute top-2 left-2" />
         {item.notify && (
           <span className="absolute top-2 right-2 rounded-full bg-black/60 p-1 text-white" title="Benachrichtigung aktiv">
             <Bell className="size-3" />
           </span>
         )}
       </Link>
+      <SelectBox selected={p.selected} onSelect={p.onSelect} className="absolute top-2 left-2" />
       <div className="flex items-start gap-1 p-2.5">
         <div className="min-w-0 flex-1">
           <Link href={item.href} className="flex items-center gap-1 text-sm font-semibold">

@@ -2,6 +2,7 @@
 
 import { and, eq, inArray, ne, sql } from "drizzle-orm";
 import { z } from "zod";
+import { parse } from "@/lib/content/validate";
 import { db } from "@/db";
 import { forumSubscriptions, forumThreads, pollOptions, polls, pollVotes, posts } from "@/db/schema";
 import { ApiError, requireUser, run } from "@/lib/auth/guards";
@@ -47,7 +48,7 @@ const ThreadInput = z.object({
 export async function createThread(input: z.input<typeof ThreadInput>) {
   return run(async () => {
     const user = await requireUser({ complete: true });
-    const data = ThreadInput.parse(input);
+    const data = parse(ThreadInput, input);
     await limitOrThrow(`thread:${user.id}`, 10, 3600, "Du hast in kurzer Zeit viele Themen erstellt. Bitte warte etwas.");
     const cat = await categoryById(data.categoryId);
     if (!cat) throw new ApiError("NOT_FOUND");
@@ -98,7 +99,7 @@ const ReplyInput = z.object({
 export async function replyToThread(input: z.input<typeof ReplyInput>) {
   return run(async (): Promise<{ post: PostView; page: number }> => {
     const user = await requireUser({ complete: true });
-    const data = ReplyInput.parse(input);
+    const data = parse(ReplyInput, input);
     await limitOrThrow(`reply:${user.id}`, 30, 600, "Du hast in kurzer Zeit sehr viele Beiträge geschrieben. Bitte warte etwas.");
     const { t, cat, moderator } = await loadThreadFor(user, data.threadId);
     if (t.locked && !moderator) throw new ApiError("FORBIDDEN", "Das Thema ist geschlossen");
@@ -137,7 +138,7 @@ export async function toggleSubscription(threadId: string) {
   return run(async () => {
     const user = await requireUser({ complete: true });
     await writeLimit(user.id, "forum-sub");
-    await loadThreadFor(user, z.uuid().parse(threadId));
+    await loadThreadFor(user, parse(z.uuid(), threadId));
     const where = and(eq(forumSubscriptions.userId, user.id), eq(forumSubscriptions.threadId, threadId));
     const existing = await db.select().from(forumSubscriptions).where(where);
     if (existing.length) {
@@ -159,7 +160,7 @@ const ModInput = z.object({
 export async function moderateThread(input: z.input<typeof ModInput>) {
   return run(async () => {
     const user = await requireUser({ complete: true });
-    const data = ModInput.parse(input);
+    const data = parse(ModInput, input);
     await writeLimit(user.id, "forum-mod", 60);
     const { t, cat, moderator } = await loadThreadFor(user, data.threadId);
     const authorAllowed = (data.action === "solve" || data.action === "unsolve") && t.authorId === user.id;
@@ -195,7 +196,7 @@ const EditThreadInput = z.object({
 export async function editThread(input: z.input<typeof EditThreadInput>) {
   return run(async () => {
     const user = await requireUser({ complete: true });
-    const data = EditThreadInput.parse(input);
+    const data = parse(EditThreadInput, input);
     await writeLimit(user.id, "forum-edit", 30);
     const { t, moderator } = await loadThreadFor(user, data.threadId);
     if (t.authorId !== user.id && !moderator) throw new ApiError("FORBIDDEN", "Keine Berechtigung");
@@ -208,7 +209,7 @@ export async function editThread(input: z.input<typeof EditThreadInput>) {
 export async function votePoll(input: { pollId: string; optionIds: string[] }) {
   return run(async (): Promise<PollView> => {
     const user = await requireUser({ complete: true });
-    const data = z.object({ pollId: z.uuid(), optionIds: z.array(z.uuid()).min(1, "Bitte wähle eine Antwort").max(10) }).parse(input);
+    const data = parse(z.object({ pollId: z.uuid(), optionIds: z.array(z.uuid()).min(1, "Bitte wähle eine Antwort").max(10) }), input);
     await writeLimit(user.id, "poll", 30);
     const [p] = await db.select().from(polls).where(eq(polls.id, data.pollId));
     if (!p) throw new ApiError("NOT_FOUND");

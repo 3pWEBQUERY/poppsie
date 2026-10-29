@@ -6,6 +6,7 @@ import { SORT_LABELS, type ThreadListItem, type ThreadSort } from "@/lib/forum/t
 import { cn } from "@/lib/utils";
 
 export function ThreadBadges({ t, className }: { t: Pick<ThreadListItem, "pinned" | "locked" | "solved" | "prefix">; className?: string }) {
+  if (!t.pinned && !t.locked && !t.solved && !t.prefix) return null;
   return (
     <span className={cn("inline-flex flex-wrap items-center gap-1 align-middle", className)}>
       {t.pinned && (
@@ -41,7 +42,7 @@ export function ThreadList({ items, empty = "Noch keine Themen." }: { items: Thr
                 {t.category.name}
               </Link>
               <span>·</span>
-              <UserAvatar user={t.author} size="xs" className="size-5" />
+              <UserAvatar user={{ ...t.author, online: false }} size="xs" className="[&>span]:size-5 [&>span]:text-[8px]" />
               <Link href={t.author.href} className="relative z-10 font-medium text-foreground hover:underline">
                 {t.author.name}
               </Link>

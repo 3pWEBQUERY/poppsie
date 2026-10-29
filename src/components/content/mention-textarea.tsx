@@ -107,7 +107,6 @@ export function MentionTextarea({ value, onChange, textareaRef, minRows = 2, max
           onKeyDown?.(e);
         }}
         aria-autocomplete="list"
-        aria-expanded={open}
         className={cn("w-full resize-none bg-transparent text-sm leading-relaxed outline-none placeholder:text-muted-foreground", className)}
         {...rest}
       />

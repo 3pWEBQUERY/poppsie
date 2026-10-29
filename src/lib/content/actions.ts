@@ -2,6 +2,7 @@
 
 import { and, asc, desc, eq, ilike, inArray, isNull, ne, sql } from "drizzle-orm";
 import { z } from "zod";
+import { parse } from "./validate";
 import { db } from "@/db";
 import { groupMembers, groups, media, postMedia, posts, reactions, users } from "@/db/schema";
 import { notifyMany } from "@/lib/notify";
@@ -36,7 +37,7 @@ const CreateInput = z.object({
 export async function createPost(input: z.input<typeof CreateInput>) {
   return run(async (): Promise<PostView> => {
     const user = await requireUser({ complete: true });
-    const data = CreateInput.parse(input);
+    const data = parse(CreateInput, input);
     await limitOrThrow(`post:${user.id}`, 20, 600, "Du hast in kurzer Zeit sehr viele Beiträge erstellt. Bitte warte etwas.");
     const countries = await viewerCountries(user);
     let approved = true;
@@ -84,7 +85,7 @@ const UpdateInput = z.object({
 export async function updatePost(input: z.input<typeof UpdateInput>) {
   return run(async (): Promise<PostView> => {
     const user = await requireUser({ complete: true });
-    const data = UpdateInput.parse(input);
+    const data = parse(UpdateInput, input);
     await writeLimit(user.id, "post-edit", 30);
     const p = await getPost(data.id);
     if (!p || p.deletedAt) throw new ApiError("NOT_FOUND");
@@ -120,7 +121,7 @@ export async function deletePost(id: string) {
   return run(async () => {
     const user = await requireUser({ complete: true });
     await writeLimit(user.id, "post-delete", 30);
-    const p = await getPost(z.uuid().parse(id));
+    const p = await getPost(parse(z.uuid(), id));
     if (!p || p.deletedAt) throw new ApiError("NOT_FOUND");
     if (p.authorId !== user.id) {
       const access = await postAccess(user, p, await viewerCountries(user));
@@ -138,7 +139,7 @@ export async function deletePost(id: string) {
 export async function getPostView(id: string) {
   return run(async (): Promise<PostView> => {
     const viewer = await getSessionUser();
-    const p = await getPost(z.uuid().parse(id));
+    const p = await getPost(parse(z.uuid(), id));
     if (!p) throw new ApiError("NOT_FOUND");
     const countries = await viewerCountries(viewer);
     const access = await postAccess(viewer, p, countries);
@@ -158,7 +159,7 @@ const ReactInput = z.object({
 export async function toggleReaction(input: z.input<typeof ReactInput>) {
   return run(async () => {
     const user = await requireUser({ complete: true });
-    const data = ReactInput.parse(input);
+    const data = parse(ReactInput, input);
     await writeLimit(user.id, "react", 120);
     await assertCanInteract(user, data.targetType, data.targetId);
     const where = and(eq(reactions.targetType, data.targetType), eq(reactions.targetId, data.targetId), eq(reactions.userId, user.id));
@@ -203,7 +204,7 @@ async function assertCanInteract(user: Awaited<ReturnType<typeof requireUser>>, 
 export async function listReactors(input: { targetType: "post" | "comment" | "story"; targetId: string }) {
   return run(async (): Promise<Reactor[]> => {
     const viewer = await getSessionUser();
-    const data = z.object({ targetType: z.enum(["post", "comment", "story"]), targetId: z.uuid() }).parse(input);
+    const data = parse(z.object({ targetType: z.enum(["post", "comment", "story"]), targetId: z.uuid() }), input);
     const countries = await viewerCountries(viewer);
     if (data.targetType === "post") {
       const p = await getPost(data.targetId);
@@ -229,7 +230,7 @@ export async function listReactors(input: { targetType: "post" | "comment" | "st
 export async function searchMentions(q: string) {
   return run(async (): Promise<MentionHit[]> => {
     const user = await requireUser();
-    const term = z.string().max(20).parse(q).toLowerCase().replace(/[^a-z0-9._]/g, "");
+    const term = parse(z.string().max(20), q).toLowerCase().replace(/[^a-z0-9._]/g, "");
     if (term.length < 1) return [];
     await limitOrThrow(`mention:${user.id}`, 120, 60);
     const countries = await viewerCountries(user);
@@ -255,7 +256,7 @@ export async function resolveLink(url: string) {
   return run(async (): Promise<EmbedPreview | null> => {
     const user = await requireUser();
     await limitOrThrow(`embed:${user.id}`, 60, 60);
-    const ref = await refFromUrl(z.string().max(500).parse(url));
+    const ref = await refFromUrl(parse(z.string().max(500), url));
     if (!ref) return null;
     const map = await resolveEmbeds([ref], user, await viewerCountries(user));
     const preview = map.get(embedKey(ref));
@@ -267,7 +268,7 @@ export async function resolveLink(url: string) {
 export async function previewEmbed(ref: { type: "profile" | "thread" | "post" | "group" | "highlight"; id: string }) {
   return run(async (): Promise<EmbedPreview | null> => {
     const user = await requireUser();
-    const data = EmbedInput.parse(ref);
+    const data = parse(EmbedInput, ref);
     const map = await resolveEmbeds([data], user, await viewerCountries(user));
     const p = map.get(embedKey(data));
     return p?.available ? p : null;
@@ -287,7 +288,7 @@ const DraftInput = z.object({
 export async function saveDraft(input: z.input<typeof DraftInput>) {
   return run(async () => {
     const user = await requireUser({ complete: true });
-    const data = DraftInput.parse(input);
+    const data = parse(DraftInput, input);
     await writeLimit(user.id, "draft", 30);
     if (data.id) {
       const [d] = await db.select().from(posts).where(and(eq(posts.id, data.id), eq(posts.authorId, user.id), eq(posts.isDraft, true)));
@@ -351,7 +352,7 @@ export async function listDrafts(input: { context: "feed" | "group" | "forum"; g
 export async function deleteDraft(id: string) {
   return run(async () => {
     const user = await requireUser();
-    await db.delete(posts).where(and(eq(posts.id, z.uuid().parse(id)), eq(posts.authorId, user.id), eq(posts.isDraft, true)));
+    await db.delete(posts).where(and(eq(posts.id, parse(z.uuid(), id)), eq(posts.authorId, user.id), eq(posts.isDraft, true)));
     return { id };
   });
 }

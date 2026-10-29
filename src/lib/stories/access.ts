@@ -21,3 +21,7 @@ export async function storyAccess(viewer: SessionUser | null, storyId: string, c
     );
   return s ?? null;
 }
+
+export function isActiveStory(s: { expiresAt: Date }) {
+  return s.expiresAt.getTime() > Date.now();
+}

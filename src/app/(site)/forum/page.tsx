@@ -61,7 +61,7 @@ export default async function ForumIndex(props: PageProps<"/forum">) {
                       {t.name}
                     </Link>
                   </h2>
-                  <span className="shrink-0 text-xs text-muted-foreground">{t.threadCount} Themen</span>
+                  <span className="shrink-0 text-xs text-muted-foreground">{t.threadCount === 1 ? "1 Thema" : `${t.threadCount} Themen`}</span>
                 </div>
                 {t.description && <p className="text-xs text-muted-foreground">{t.description}</p>}
                 {t.children.length > 0 && (

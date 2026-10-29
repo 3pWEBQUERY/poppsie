@@ -3,6 +3,7 @@
 import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { parse } from "@/lib/content/validate";
 import { db } from "@/db";
 import { media, reactions, stories, storyComments, storyViews, users } from "@/db/schema";
 import { track } from "@/lib/analytics";
@@ -22,9 +23,10 @@ import type { StoryCommentView, StoryView, StoryViewer } from "./types";
 export async function loadStories(input: { authorId: string; highlights?: boolean; title?: string | null; ids?: string[] }) {
   return run(async (): Promise<StoryView[]> => {
     const user = await requireUser();
-    const data = z
-      .object({ authorId: z.uuid(), highlights: z.boolean().optional(), title: z.string().max(60).nullish(), ids: z.array(z.uuid()).max(50).optional() })
-      .parse(input);
+    const data = parse(
+      z.object({ authorId: z.uuid(), highlights: z.boolean().optional(), title: z.string().max(60).nullish(), ids: z.array(z.uuid()).max(50).optional() }),
+      input,
+    );
     const countries = await viewerCountries(user);
     return authorStories(data.authorId, user, countries, { highlights: data.highlights, title: data.title === undefined ? undefined : data.title, ids: data.ids });
   });
@@ -35,7 +37,7 @@ export async function markStoryViewed(storyId: string) {
   return run(async () => {
     const user = await requireUser();
     await limitOrThrow(`story-view:${user.id}`, 300, 60);
-    const s = await storyAccess(user, z.uuid().parse(storyId), await viewerCountries(user));
+    const s = await storyAccess(user, parse(z.uuid(), storyId), await viewerCountries(user));
     if (!s || s.authorId === user.id) return { recorded: false };
     const res = await db
       .insert(storyViews)
@@ -51,7 +53,7 @@ export async function loadStoryComments(storyId: string) {
   return run(async (): Promise<StoryCommentView[]> => {
     const user = await requireUser();
     const countries = await viewerCountries(user);
-    const s = await storyAccess(user, z.uuid().parse(storyId), countries);
+    const s = await storyAccess(user, parse(z.uuid(), storyId), countries);
     if (!s) throw new ApiError("NOT_FOUND");
     const rows = await db
       .select()
@@ -76,7 +78,7 @@ export async function loadStoryComments(storyId: string) {
 export async function addStoryComment(input: { storyId: string; body: string }) {
   return run(async (): Promise<StoryCommentView> => {
     const user = await requireUser({ complete: true });
-    const data = z.object({ storyId: z.uuid(), body: z.string().trim().min(1, "Der Kommentar ist leer").max(1000) }).parse(input);
+    const data = parse(z.object({ storyId: z.uuid(), body: z.string().trim().min(1, "Der Kommentar ist leer").max(1000) }), input);
     await writeLimit(user.id, "story-comment", 20);
     const s = await storyAccess(user, data.storyId, await viewerCountries(user));
     if (!s) throw new ApiError("NOT_FOUND");
@@ -98,7 +100,7 @@ export async function deleteStoryComment(id: string) {
       .select({ id: storyComments.id, authorId: storyComments.authorId, owner: stories.authorId })
       .from(storyComments)
       .innerJoin(stories, eq(stories.id, storyComments.storyId))
-      .where(eq(storyComments.id, z.uuid().parse(id)));
+      .where(eq(storyComments.id, parse(z.uuid(), id)));
     if (!c) throw new ApiError("NOT_FOUND");
     if (c.authorId !== user.id && c.owner !== user.id && !isStaff(user)) throw new ApiError("FORBIDDEN", "Keine Berechtigung");
     await db.delete(storyComments).where(eq(storyComments.id, c.id));
@@ -124,7 +126,7 @@ const PublishInput = z.object({
 export async function publishStory(input: z.input<typeof PublishInput>) {
   return run(async () => {
     const user = await requireUser({ complete: true, types: ["escort", "club"] });
-    const data = PublishInput.parse(input);
+    const data = parse(PublishInput, input);
     await limitOrThrow(`story:${user.id}`, 30, 86400, "Maximal 30 Stories pro Tag");
     const [m] = await db.select().from(media).where(and(eq(media.id, data.mediaId), eq(media.ownerId, user.id)));
     if (!m || m.status === "rejected" || (m.kind !== "image" && m.kind !== "video")) throw new ApiError("INVALID", "Bitte lade ein Bild oder Video hoch");
@@ -141,7 +143,7 @@ export async function publishStory(input: z.input<typeof PublishInput>) {
 export async function setStoryHighlight(input: { id: string; title: string | null }) {
   return run(async () => {
     const user = await requireUser({ complete: true, types: ["escort", "club"] });
-    const data = z.object({ id: z.uuid(), title: z.string().trim().max(40).nullable() }).parse(input);
+    const data = parse(z.object({ id: z.uuid(), title: z.string().trim().max(40).nullable() }), input);
     await writeLimit(user.id, "story-highlight", 30);
     const res = await db
       .update(stories)
@@ -159,7 +161,7 @@ export async function deleteStory(id: string) {
     const user = await requireUser({ complete: true });
     const res = await db
       .delete(stories)
-      .where(and(eq(stories.id, z.uuid().parse(id)), isStaff(user) ? undefined : eq(stories.authorId, user.id)))
+      .where(and(eq(stories.id, parse(z.uuid(), id)), isStaff(user) ? undefined : eq(stories.authorId, user.id)))
       .returning({ id: stories.id });
     if (!res.length) throw new ApiError("NOT_FOUND");
     revalidatePath("/dashboard/stories");
@@ -171,7 +173,7 @@ export async function deleteStory(id: string) {
 export async function storyViewers(storyId: string) {
   return run(async (): Promise<StoryViewer[]> => {
     const user = await requireUser({ complete: true });
-    const [s] = await db.select({ authorId: stories.authorId }).from(stories).where(eq(stories.id, z.uuid().parse(storyId)));
+    const [s] = await db.select({ authorId: stories.authorId }).from(stories).where(eq(stories.id, parse(z.uuid(), storyId)));
     if (!s || (s.authorId !== user.id && !isStaff(user))) throw new ApiError("NOT_FOUND");
     const rows = await db
       .select({ viewerId: storyViews.viewerId, incognito: storyViews.incognito, viewedAt: storyViews.viewedAt, avatar: users.avatarMediaId, kind: reactions.kind })

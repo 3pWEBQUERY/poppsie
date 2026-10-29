@@ -194,6 +194,17 @@ export function Messenger({ me, initialList, initialThread, draft: initialDraft,
     [refreshItem],
   );
 
+  const onChanged = useCallback(
+    (id: string, reason?: "accepted") => {
+      if (reason === "accepted") {
+        setList((l) => l.map((c) => (c.id === id ? { ...c, incomingRequest: false } : c)));
+        setTab("all");
+      }
+      refreshItem(id);
+    },
+    [refreshItem],
+  );
+
   const onRemoved = useCallback((id: string) => {
     setList((l) => l.filter((c) => c.id !== id));
     setActiveId((a) => (a === id ? null : a));
@@ -219,6 +230,7 @@ export function Messenger({ me, initialList, initialThread, draft: initialDraft,
             onFlag={applyFlag}
             onRead={onRead}
             onRemoved={onRemoved}
+            onChanged={onChanged}
           />
         ) : (
           <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center text-muted-foreground">

@@ -40,6 +40,8 @@ export type ThreadProps = {
   onFlag: (conversationId: string, flag: Flag, value: boolean) => void;
   onRead: (conversationId: string) => void;
   onRemoved: (conversationId: string) => void;
+  /** Konversation hat sich geändert (Anfrage angenommen, Blockierung): Listeneintrag neu laden. */
+  onChanged: (conversationId: string, reason?: "accepted") => void;
 };
 
 function upsert(list: MessageView[], items: MessageView[]) {
@@ -48,7 +50,7 @@ function upsert(list: MessageView[], items: MessageView[]) {
   return [...map.values()].sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id));
 }
 
-export function Thread({ me, conversationId, initial, onBack, onCreated, onFlag, onRead, onRemoved }: ThreadProps) {
+export function Thread({ me, conversationId, initial, onBack, onCreated, onFlag, onRead, onRemoved, onChanged }: ThreadProps) {
   const handleLocked = useLockedHandler();
   const [meta, setMeta] = useState<ThreadMeta | null>(initial?.meta ?? null);
   const [messages, setMessages] = useState<MessageView[]>(initial?.page.messages ?? []);
@@ -109,6 +111,19 @@ export function Thread({ me, conversationId, initial, onBack, onCreated, onFlag,
       el.scrollTop = el.scrollHeight;
     }
   }, [messages, typing, loading]);
+
+  // Am unteren Rand bleiben, wenn Inhalte nachträglich wachsen (Bilder, Schriften, Buchungskarten).
+  const content = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = content.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => {
+      const sc = scroller.current;
+      if (sc && stickBottom.current && prevHeight.current === null) sc.scrollTop = sc.scrollHeight;
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [loading]);
 
   const onScroll = () => {
     const el = scroller.current;
@@ -176,7 +191,14 @@ export function Thread({ me, conversationId, initial, onBack, onCreated, onFlag,
   useRealtime((e) => {
     if (!meta) return;
     if (e.type === "presence" && e.userId === meta.partner.id) {
-      setMeta({ ...meta, partner: { ...meta.partner, online: e.online, lastSeenAt: e.online ? meta.partner.lastSeenAt : new Date().toISOString() } });
+      setMeta({
+        ...meta,
+        partner: {
+          ...meta.partner,
+          online: e.online,
+          lastSeenAt: e.online ? meta.partner.lastSeenAt : new Date().toISOString(),
+        },
+      });
       return;
     }
     if (e.type === "booking.updated" && conversationId && e.conversationId === conversationId) {
@@ -241,7 +263,12 @@ export function Thread({ me, conversationId, initial, onBack, onCreated, onFlag,
     if (!conversationId) {
       const isRequest = meta.canSend.ok && meta.canSend.isNewRequest;
       onCreated(res.data.conversationId, {
-        meta: { ...meta, conversationId: res.data.conversationId, outgoingRequest: isRequest, canSend: { ok: true, isNewRequest: false } },
+        meta: {
+          ...meta,
+          conversationId: res.data.conversationId,
+          outgoingRequest: isRequest,
+          canSend: { ok: true, isNewRequest: false },
+        },
         page: { messages: [res.data.message], nextCursor: null },
       });
     } else {
@@ -298,6 +325,7 @@ export function Thread({ me, conversationId, initial, onBack, onCreated, onFlag,
     if (!res.ok) return fail(res);
     toast.success(`${meta.partner.name} ist blockiert`);
     refreshMeta();
+    if (conversationId) onChanged(conversationId);
   };
 
   const unblock = async () => {
@@ -306,14 +334,17 @@ export function Thread({ me, conversationId, initial, onBack, onCreated, onFlag,
     if (!res.ok) return fail(res);
     toast.success("Blockierung aufgehoben");
     refreshMeta();
+    if (conversationId) onChanged(conversationId);
   };
 
   const request = async (action: "accept" | "decline") => {
     if (!conversationId || !meta) return;
     const res = action === "accept" ? await acceptRequest(conversationId) : await declineRequest(conversationId);
     if (!res.ok) return fail(res);
-    if (action === "accept") setMeta({ ...meta, incomingRequest: false });
-    else {
+    if (action === "accept") {
+      setMeta({ ...meta, incomingRequest: false });
+      onChanged(conversationId, "accepted");
+    } else {
       toast("Anfrage abgelehnt und archiviert");
       onFlag(conversationId, "archived", true);
       onBack();
@@ -341,12 +372,21 @@ export function Thread({ me, conversationId, initial, onBack, onCreated, onFlag,
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <ThreadHeader meta={meta} typing={typing} reportMessageId={lastPartnerMsg?.id ?? null} onBack={onBack} onFlag={flag} onBlock={block} onUnblock={unblock} />
+      <ThreadHeader
+        meta={meta}
+        typing={typing}
+        reportMessageId={lastPartnerMsg?.id ?? null}
+        onBack={onBack}
+        onFlag={flag}
+        onBlock={block}
+        onUnblock={unblock}
+      />
 
       {meta.incomingRequest && (
         <div className="flex flex-col gap-2 border-b bg-primary/10 px-4 py-3 text-sm sm:flex-row sm:items-center">
           <p className="flex-1">
-            <strong>{meta.partner.name}</strong> möchte mit dir chatten. Antworte oder nimm die Anfrage an. Bis dahin sieht {meta.partner.name} nicht, ob du gelesen hast.
+            <strong>{meta.partner.name}</strong> möchte mit dir chatten. Antworte oder nimm die Anfrage an. Bis dahin sieht {meta.partner.name} nicht, ob du
+            gelesen hast.
           </p>
           <div className="flex gap-2">
             <Button size="sm" onClick={() => request("accept")}>
@@ -359,63 +399,67 @@ export function Thread({ me, conversationId, initial, onBack, onCreated, onFlag,
         </div>
       )}
 
-      <div ref={scroller} onScroll={onScroll} className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto px-3 py-3 sm:px-4">
-        {cursor && (
-          <div className="flex justify-center py-1">
-            <Button variant="ghost" size="sm" onClick={fetchOlder} disabled={older}>
-              {older && <Loader2 className="animate-spin" />} Ältere Nachrichten laden
-            </Button>
-          </div>
-        )}
-        {messages.length === 0 && (
-          <div className="m-auto flex max-w-xs flex-col items-center gap-3 text-center text-sm text-muted-foreground">
-            <UserAvatar user={meta.partner} size="lg" />
-            <p>
-              {meta.canSend.ok ? (
-                <>
-                  Schreib <strong className="text-foreground">{meta.partner.name}</strong> die erste Nachricht.
-                </>
-              ) : (
-                <>Noch keine Nachrichten.</>
+      <div ref={scroller} onScroll={onScroll} className="min-h-0 flex-1 overflow-y-auto">
+        <div ref={content} className="flex min-h-full flex-col gap-1.5 px-3 py-3 sm:px-4">
+          {cursor && (
+            <div className="flex justify-center py-1">
+              <Button variant="ghost" size="sm" onClick={fetchOlder} disabled={older}>
+                {older && <Loader2 className="animate-spin" />} Ältere Nachrichten laden
+              </Button>
+            </div>
+          )}
+          {messages.length === 0 && (
+            <div className="m-auto flex max-w-xs flex-col items-center gap-3 text-center text-sm text-muted-foreground">
+              <UserAvatar user={meta.partner} size="lg" />
+              <p>
+                {meta.canSend.ok ? (
+                  <>
+                    Schreib <strong className="text-foreground">{meta.partner.name}</strong> die erste Nachricht.
+                  </>
+                ) : (
+                  <>Noch keine Nachrichten.</>
+                )}
+              </p>
+            </div>
+          )}
+          {messages.map((m, i) => (
+            <Fragment key={m.id}>
+              {(i === 0 || !sameDay(messages[i - 1]!.createdAt, m.createdAt)) && (
+                <div className="my-2 self-center rounded-full bg-secondary px-3 py-0.5 text-[11px] font-medium text-muted-foreground">
+                  {dayLabel(m.createdAt)}
+                </div>
               )}
-            </p>
-          </div>
-        )}
-        {messages.map((m, i) => (
-          <Fragment key={m.id}>
-            {(i === 0 || !sameDay(messages[i - 1]!.createdAt, m.createdAt)) && (
-              <div className="my-2 self-center rounded-full bg-secondary px-3 py-0.5 text-[11px] font-medium text-muted-foreground">{dayLabel(m.createdAt)}</div>
-            )}
-            <MessageBubble
-              m={m}
-              mine={m.senderId === me.id}
-              viewerId={me.id}
-              tick={tickFor(m)}
-              now={now}
-              nameOf={nameOf}
-              highlighted={highlight === m.id}
-              onReply={(x) => {
-                setEditing(null);
-                setReplyTo(x);
-              }}
-              onEdit={(x) => {
-                setReplyTo(null);
-                setEditing(x);
-              }}
-              onDelete={setToDelete}
-              onReact={react}
-              onJump={jump}
-              onRefresh={(x) => refetch([x.id])}
-            />
-          </Fragment>
-        ))}
-        {typing && (
-          <div className="flex items-center gap-1 self-start rounded-2xl rounded-bl-md bg-secondary px-3 py-2.5" aria-label={`${meta.partner.name} schreibt`}>
-            {[0, 150, 300].map((d) => (
-              <span key={d} className="size-1.5 animate-bounce rounded-full bg-muted-foreground" style={{ animationDelay: `${d}ms` }} />
-            ))}
-          </div>
-        )}
+              <MessageBubble
+                m={m}
+                mine={m.senderId === me.id}
+                viewerId={me.id}
+                tick={tickFor(m)}
+                now={now}
+                nameOf={nameOf}
+                highlighted={highlight === m.id}
+                onReply={(x) => {
+                  setEditing(null);
+                  setReplyTo(x);
+                }}
+                onEdit={(x) => {
+                  setReplyTo(null);
+                  setEditing(x);
+                }}
+                onDelete={setToDelete}
+                onReact={react}
+                onJump={jump}
+                onRefresh={(x) => refetch([x.id])}
+              />
+            </Fragment>
+          ))}
+          {typing && (
+            <div className="flex items-center gap-1 self-start rounded-2xl rounded-bl-md bg-secondary px-3 py-2.5" aria-label={`${meta.partner.name} schreibt`}>
+              {[0, 150, 300].map((d) => (
+                <span key={d} className="size-1.5 animate-bounce rounded-full bg-muted-foreground" style={{ animationDelay: `${d}ms` }} />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       <Footer
@@ -479,7 +523,9 @@ function Footer({ meta, composer, onUnblock }: { meta: ThreadMeta; composer: Rea
         )}
         <div className="flex-1">
           <p className="font-semibold">{meta.canSend.message}</p>
-          {meta.canSend.code === "CONNECT_OFF" && <p className="text-xs text-muted-foreground">Neue Nachrichten an {meta.partner.name} sind nur über eine Buchungsanfrage möglich.</p>}
+          {meta.canSend.code === "CONNECT_OFF" && (
+            <p className="text-xs text-muted-foreground">Neue Nachrichten an {meta.partner.name} sind nur über eine Buchungsanfrage möglich.</p>
+          )}
         </div>
         {booking && (
           <Button size="sm" asChild>

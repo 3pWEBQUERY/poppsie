@@ -26,6 +26,7 @@ async function unreadCounts(userId: string) {
         isNull(messages.deletedAt),
         or(isNull(conversationMembers.lastReadAt), gt(messages.createdAt, conversationMembers.lastReadAt)),
         eq(conversationMembers.archived, false),
+        eq(conversationMembers.muted, false),
       ),
     );
   const [notif] = await db

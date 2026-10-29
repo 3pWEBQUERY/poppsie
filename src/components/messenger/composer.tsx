@@ -27,6 +27,19 @@ type Pending = {
 
 export type SendInput = { body?: string; attachments?: { mediaId: string; viewOnce?: boolean }[] };
 
+function audioDuration(file: File): Promise<number | undefined> {
+  return new Promise((resolve) => {
+    const a = document.createElement("audio");
+    a.preload = "metadata";
+    a.onloadedmetadata = () => {
+      URL.revokeObjectURL(a.src);
+      resolve(Number.isFinite(a.duration) ? Math.round(a.duration) : undefined);
+    };
+    a.onerror = () => resolve(undefined);
+    a.src = URL.createObjectURL(file);
+  });
+}
+
 function kindOf(file: File): AttachmentKind | null {
   if (file.type.startsWith("image/")) return "image";
   if (file.type.startsWith("video/")) return "video";
@@ -116,7 +129,7 @@ export function Composer({
     const preview = kind === "image" || kind === "video" ? URL.createObjectURL(file) : null;
     setPending((p) => [...p, { key, name: file.name, size: file.size, kind, preview, progress: 0, media: null, viewOnce: false }]);
     try {
-      const durationSec = opts.durationSec ?? (kind === "video" ? await videoDuration(file) : undefined);
+      const durationSec = opts.durationSec ?? (kind === "video" ? await videoDuration(file) : kind === "audio" ? await audioDuration(file) : undefined);
       const media = await uploadFile(file, "message", {
         durationSec,
         onProgress: (progress) => setPending((p) => p.map((x) => (x.key === key ? { ...x, progress } : x))),

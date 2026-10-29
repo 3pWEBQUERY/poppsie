@@ -6,6 +6,7 @@ import { clubTypeSchemas } from "@/db/schema";
 import { Empty, PageTitle } from "@/components/admin/badges";
 import { ClubSchemaEditor } from "@/components/admin/club-schema-editor";
 import { requireStaffPage } from "@/lib/admin/guard";
+import { formatDateTime } from "@/lib/admin/labels";
 
 export const metadata: Metadata = { title: "Club-Typen" };
 
@@ -30,7 +31,7 @@ export default async function ClubTypesPage() {
       {rows.length === 0 ? (
         <Empty>Keine Schemas vorhanden. Sie werden beim Serverstart aus den Standardwerten angelegt.</Empty>
       ) : (
-        <ClubSchemaEditor schemas={rows.map((r) => ({ clubType: r.clubType, label: r.label, fields: r.fields, updatedAt: r.updatedAt.toISOString() }))} />
+        <ClubSchemaEditor schemas={rows.map((r) => ({ clubType: r.clubType, label: r.label, fields: r.fields, updatedAt: formatDateTime(r.updatedAt) }))} />
       )}
     </div>
   );

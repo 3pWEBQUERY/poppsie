@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { revokeOtherSessions, revokeSession } from "@/lib/account/actions";
 
+/** createdAt/lastUsedAt sind serverseitig formatiert (Zeitzone der Person, keine Hydration-Abweichung). */
 export type SessionRow = { id: string; ip: string | null; userAgent: string | null; createdAt: string; lastUsedAt: string; current: boolean };
 
 /** Grobe Gerätebeschreibung aus dem User-Agent. */
@@ -17,8 +18,6 @@ function describe(ua: string | null) {
   const browser = /Edg\//.test(ua) ? "Edge" : /Firefox\//.test(ua) ? "Firefox" : /Chrome\//.test(ua) ? "Chrome" : /Safari\//.test(ua) ? "Safari" : "Browser";
   return { label: `${browser} auf ${os}`, mobile: /Mobile|Android|iPhone/.test(ua) };
 }
-
-const fmt = (d: string) => new Date(d).toLocaleString("de-CH", { dateStyle: "medium", timeStyle: "short" });
 
 export function SessionsList({ sessions }: { sessions: SessionRow[] }) {
   const router = useRouter();
@@ -38,7 +37,7 @@ export function SessionsList({ sessions }: { sessions: SessionRow[] }) {
                   {d.label} {s.current && <Badge variant="success">Dieses Gerät</Badge>}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {s.ip ?? "IP unbekannt"} · zuletzt aktiv {fmt(s.lastUsedAt)} · angemeldet {fmt(s.createdAt)}
+                  {s.ip ?? "IP unbekannt"} · zuletzt aktiv {s.lastUsedAt} · angemeldet {s.createdAt}
                 </p>
               </div>
               {!s.current && (

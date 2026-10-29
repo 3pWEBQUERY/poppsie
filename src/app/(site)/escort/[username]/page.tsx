@@ -1,5 +1,8 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { eq } from "drizzle-orm";
+import { db } from "@/db";
+import { escortProfiles } from "@/db/schema";
 import type { Metadata } from "next";
 import { BadgeCheck, MapPin } from "lucide-react";
 import { Flag } from "@/components/shared/flag";
@@ -46,7 +49,10 @@ export async function generateMetadata(props: PageProps<"/escort/[username]">): 
   const { username } = await props.params;
   const { u, visible } = await resolve(username);
   if (!u || !visible || u.accountType !== "escort") return { title: "Profil nicht gefunden" };
-  const { escort } = await loadEscortPage(u, null);
+  const [escort] = await db
+    .select({ displayName: escortProfiles.displayName, city: escortProfiles.city, slogan: escortProfiles.slogan })
+    .from(escortProfiles)
+    .where(eq(escortProfiles.userId, u.id));
   const name = escort?.displayName || u.username;
   return {
     title: escort?.city ? `${name} – Escort in ${escort.city}` : name,
@@ -137,10 +143,12 @@ export default async function EscortProfilePage(props: PageProps<"/escort/[usern
     <div className="mx-auto max-w-6xl px-4 py-6">
       {(self || isStaff(viewer)) && <PreviewNotice user={u} self={self} />}
       <VisitTracker targetId={u.id} src={typeof sp.src === "string" ? sp.src : null} />
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="flex min-w-0 flex-col gap-6">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:grid-rows-[auto_1fr]">
+        <div className="flex min-w-0 flex-col gap-6 lg:col-start-1 lg:row-start-1">
           <ProfileGallery items={d.gallery} name={name} fallback={d.avatarUrl} />
           <ProfileStories userId={u.id} viewer={viewer} />
+        </div>
+        <div className="min-w-0 lg:col-start-1 lg:row-start-2">
           <div id="berichte">
             <ProfileTabs
               tabs={[
@@ -152,7 +160,7 @@ export default async function EscortProfilePage(props: PageProps<"/escort/[usern
           </div>
         </div>
 
-        <StickyAside className="flex flex-col gap-4">
+        <StickyAside className="flex flex-col gap-4 lg:col-start-2 lg:row-span-2 lg:row-start-1">
           <section className="flex flex-col gap-4 rounded-lg border bg-card p-4">
             <div className="flex items-center gap-3">
               <UserAvatar user={{ name, avatarUrl: d.avatarUrl, online: d.online }} size="md" ring={d.hasStory ? "story" : undefined} />
