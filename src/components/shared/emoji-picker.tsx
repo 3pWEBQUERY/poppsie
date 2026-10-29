@@ -65,13 +65,12 @@ export function EmojiPanel({ onSelect }: { onSelect: (emoji: string) => void }) 
   const [all, setAll] = useState<Emoji[]>([]);
   const [query, setQuery] = useState("");
   const [group, setGroup] = useState(0);
-  const [tone, setTone] = useState(0);
-  const [recent, setRecent] = useState<string[]>([]);
+  // Das Panel wird nur im Browser (nach Klick) gerendert, daher ist localStorage hier verfügbar.
+  const [tone, setTone] = useState(() => readLocal<number>(TONE_KEY, 0));
+  const [recent, setRecent] = useState<string[]>(() => readLocal<string[]>(RECENT_KEY, []));
 
   useEffect(() => {
     loadEmojis().then(setAll);
-    setRecent(readLocal<string[]>(RECENT_KEY, []));
-    setTone(readLocal<number>(TONE_KEY, 0));
   }, []);
 
   const withTone = (e: Emoji) => (tone > 0 && e.skins?.[tone - 1] ? e.skins[tone - 1]!.unicode : e.unicode);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, EyeOff, ImagePlus, Loader2, Play, X } from "lucide-react";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
@@ -83,7 +83,9 @@ export function MediaUploader({
   const [pending, setPending] = useState<Pending[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const latest = useRef(value);
-  latest.current = value;
+  useEffect(() => {
+    latest.current = value;
+  }, [value]);
 
   const handleFiles = async (files: FileList | File[]) => {
     const list = Array.from(files).slice(0, Math.max(0, max - value.length - pending.length));

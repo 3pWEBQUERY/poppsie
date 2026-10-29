@@ -67,7 +67,7 @@ export function ActionPanel({ flag, user }: Props) {
         </Button>
       )}
       {!user && <p className="text-xs text-muted-foreground">Die betroffene Person konnte nicht ermittelt werden (Inhalt gelöscht).</p>}
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 [&>button]:h-8 [&>button]:justify-start [&>button]:px-2.5 [&>button]:text-xs">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 [&>button]:h-8 [&>button]:min-w-0 [&>button]:justify-start [&>button]:px-2.5 [&>button]:text-xs">
         {user && (
           <ReasonDialog
             trigger={
@@ -167,7 +167,7 @@ export function ActionPanel({ flag, user }: Props) {
             <ReasonDialog
               trigger={
                 <Button variant="outline">
-                  <Eye /> Profil wiederherstellen
+                  <Eye /> Profil einblenden
                 </Button>
               }
               title="Profil wieder einblenden"

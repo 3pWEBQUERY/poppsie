@@ -95,13 +95,25 @@ export async function saveUsername(raw: string, accountType?: string) {
   });
 }
 
+let dnsWorks: Promise<boolean> | null = null;
+
+/** Funktioniert DNS überhaupt? Ohne DNS (z. B. offline) wird der MX-Check übersprungen statt zu blockieren. */
+function dnsAvailable() {
+  dnsWorks ??= resolveMx("gmail.com").then(
+    (r) => r.length > 0,
+    () => false,
+  );
+  return dnsWorks;
+}
+
 async function hasMx(domain: string) {
   try {
     const mx = await resolveMx(domain);
     return mx.length > 0;
   } catch (e) {
-    // Ohne DNS (z. B. lokal offline) nicht blockieren
-    return (e as NodeJS.ErrnoException).code !== "ENOTFOUND" && (e as NodeJS.ErrnoException).code !== "ENODATA";
+    const code = (e as NodeJS.ErrnoException).code;
+    if (code !== "ENOTFOUND" && code !== "ENODATA") return true;
+    return !(await dnsAvailable());
   }
 }
 

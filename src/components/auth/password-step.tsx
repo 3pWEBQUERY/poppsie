@@ -37,21 +37,21 @@ export function PasswordStep({
   const [show, setShow] = useState(false);
   const [terms, setTerms] = useState(false);
   const [adult, setAdult] = useState(false);
-  const [score, setScore] = useState<{ score: number; warning: string } | null>(null);
+  const [result, setResult] = useState<{ for: string; score: number; warning: string } | null>(null);
+  const inputsKey = userInputs.join("\n");
   const [turnstile, setTurnstile] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
   useEffect(() => {
-    if (!password) {
-      setScore(null);
-      return;
-    }
+    if (!password) return;
     let alive = true;
-    passwordStrength(password, userInputs).then((r) => alive && setScore({ score: r.score, warning: r.warning }));
+    passwordStrength(password, inputsKey.split("\n")).then((r) => alive && setResult({ for: password, score: r.score, warning: r.warning }));
     return () => {
       alive = false;
     };
-  }, [password, userInputs]);
+  }, [password, inputsKey]);
+  // Nur das Ergebnis für das aktuelle Passwort anzeigen
+  const score = password && result?.for === password ? result : null;
 
   const tooShort = password.length > 0 && password.length < 10;
   const mismatch = confirm.length > 0 && confirm !== password;

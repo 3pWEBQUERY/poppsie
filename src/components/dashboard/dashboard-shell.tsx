@@ -30,21 +30,6 @@ export function DashboardShell({ accountType, complete, percent, nextStep, kycSt
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<string | null>(nextStep);
 
-  useEffect(() => {
-    if (complete) return;
-    let later = false;
-    try {
-      later = sessionStorage.getItem(LATER_KEY) === "1";
-    } catch {}
-    if (!later) setOpen(true);
-  }, [complete]);
-
-  useEffect(() => {
-    const onOpen = (e: Event) => openWizard((e as CustomEvent<string | null>).detail ?? null);
-    window.addEventListener("pp:open-wizard", onOpen);
-    return () => window.removeEventListener("pp:open-wizard", onOpen);
-  });
-
   const openWizard = useCallback(
     (s?: string | null) => {
       setStep(s ?? nextStep);
@@ -52,6 +37,23 @@ export function DashboardShell({ accountType, complete, percent, nextStep, kycSt
     },
     [nextStep],
   );
+
+  // Automatisch öffnen, ausser "Später erledigen" wurde in dieser Sitzung gewählt (sessionStorage gibt es nur im Browser).
+  useEffect(() => {
+    if (complete) return;
+    let later = false;
+    try {
+      later = sessionStorage.getItem(LATER_KEY) === "1";
+    } catch {}
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Browser-Speicher ist erst nach dem Mount lesbar
+    if (!later) setOpen(true);
+  }, [complete]);
+
+  useEffect(() => {
+    const onOpen = (e: Event) => openWizard((e as CustomEvent<string | null>).detail ?? null);
+    window.addEventListener("pp:open-wizard", onOpen);
+    return () => window.removeEventListener("pp:open-wizard", onOpen);
+  }, [openWizard]);
 
   const later = () => {
     try {

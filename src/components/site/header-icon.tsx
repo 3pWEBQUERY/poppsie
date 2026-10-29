@@ -18,14 +18,16 @@ export function HeaderIcon({
   live?: "messages" | "notifications";
   children: React.ReactNode;
 }) {
-  const [n, setN] = useState(count);
-  useEffect(() => setN(count), [count]);
+  // Live-Zähler: Serverwert plus Ereignisse seit dem letzten Render; neuer Serverwert setzt zurück.
+  const [live_, setLive] = useState({ base: count, extra: 0 });
+  if (live_.base !== count) setLive({ base: count, extra: 0 });
+  const n = count + live_.extra;
   useEffect(() => {
     if (!live) return;
     const onEvent = (e: Event) => {
       const type = (e as CustomEvent<{ type: string }>).detail?.type;
-      if (live === "messages" && type === "message.new") setN((x) => x + 1);
-      if (live === "notifications" && type === "notification") setN((x) => x + 1);
+      if (live === "messages" && type === "message.new") setLive((s) => ({ ...s, extra: s.extra + 1 }));
+      if (live === "notifications" && type === "notification") setLive((s) => ({ ...s, extra: s.extra + 1 }));
     };
     window.addEventListener("pp:realtime", onEvent);
     return () => window.removeEventListener("pp:realtime", onEvent);

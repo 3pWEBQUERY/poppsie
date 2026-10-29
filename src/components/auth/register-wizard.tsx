@@ -167,22 +167,27 @@ export function RegisterWizard({
 }
 
 function UsernameStep({ value, onChange, onSubmit, pending }: { value: string; onChange: (v: string) => void; onSubmit: () => void; pending: boolean }) {
-  const [status, setStatus] = useState<{ checking: boolean; available: boolean | null; reason: string | null }>({ checking: false, available: null, reason: null });
-  const seq = useRef(0);
+  const [checked, setChecked] = useState<{ value: string; available: boolean; reason: string | null } | null>(null);
+  const v = value.trim().toLowerCase();
   useEffect(() => {
-    const v = value.trim().toLowerCase();
-    if (v.length < 3) {
-      setStatus({ checking: false, available: null, reason: v ? "Mindestens 3 Zeichen" : null });
-      return;
-    }
-    const id = ++seq.current;
-    setStatus((st) => ({ ...st, checking: true }));
+    if (v.length < 3) return;
+    let alive = true;
     const t = setTimeout(async () => {
       const r = await checkUsername(v);
-      if (id === seq.current) setStatus({ checking: false, available: r.available, reason: r.reason });
+      if (alive) setChecked({ value: v, available: r.available, reason: r.reason });
     }, 300);
-    return () => clearTimeout(t);
-  }, [value]);
+    return () => {
+      alive = false;
+      clearTimeout(t);
+    };
+  }, [v]);
+  // Zustand wird aus Eingabe und letzter Server-Prüfung abgeleitet
+  const status =
+    v.length < 3
+      ? { checking: false, available: null, reason: v ? "Mindestens 3 Zeichen" : null }
+      : checked?.value === v
+        ? { checking: false, available: checked.available, reason: checked.reason }
+        : { checking: true, available: null, reason: null };
 
   return (
     <form
@@ -230,6 +235,7 @@ function CodeStep({ email, onSuccess }: { email: string; onSuccess: (to: string)
   const [error, setError] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(60);
   const [pending, start] = useTransition();
+  const otpRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (cooldown <= 0) return;
@@ -245,6 +251,8 @@ function CodeStep({ email, onSuccess }: { email: string; onSuccess: (to: string)
       else {
         setError(res.error);
         setCode("");
+        // Feld war während der Prüfung deaktiviert: Fokus zurückgeben, damit direkt neu getippt werden kann
+        setTimeout(() => otpRef.current?.focus(), 0);
       }
     });
 
@@ -254,6 +262,7 @@ function CodeStep({ email, onSuccess }: { email: string; onSuccess: (to: string)
         Wir haben einen 6-stelligen Code an <strong>{email || "deine E-Mail-Adresse"}</strong> gesendet. Er ist 15 Minuten gültig.
       </p>
       <InputOTP
+        ref={otpRef}
         maxLength={6}
         value={code}
         onChange={(v) => setCode(v.replace(/\D/g, ""))}

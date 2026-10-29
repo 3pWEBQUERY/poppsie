@@ -9,8 +9,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const user = await requireStaffPage();
   const counts = await openCounts();
   return (
-    <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 lg:grid-cols-[220px_1fr]">
-      <aside>
+    <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-4 py-6 lg:grid-cols-[220px_1fr]">
+      <aside className="min-w-0">
         <AdminSidebar counts={counts} role={user.role === "admin" ? "admin" : "moderator"} />
       </aside>
       <div className="min-w-0">{children}</div>

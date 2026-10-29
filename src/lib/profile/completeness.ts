@@ -55,10 +55,15 @@ export function profileChecks(user: User, ctx: { escort?: Escort; club?: Club; l
   ];
 }
 
+/** Reihenfolge der Wizard-Schritte; der nächste offene Schritt folgt dieser Reihenfolge. */
+const STEP_ORDER = ["basics", "appearance", "location", "about", "services", "hours", "details", "media"];
+const byStep = (a: Check, b: Check) => STEP_ORDER.indexOf(a.step) - STEP_ORDER.indexOf(b.step);
+
 export function summarize(checks: Check[]) {
   const required = checks.filter((c) => c.required);
   const complete = required.every((c) => c.done);
   const percent = Math.round((checks.filter((c) => c.done).length / Math.max(checks.length, 1)) * 100);
-  const nextStep = checks.find((c) => c.required && !c.done)?.step ?? checks.find((c) => !c.done)?.step ?? null;
+  const open = [...checks].sort(byStep);
+  const nextStep = open.find((c) => c.required && !c.done)?.step ?? open.find((c) => !c.done)?.step ?? null;
   return { complete, percent, nextStep };
 }

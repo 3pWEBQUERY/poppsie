@@ -41,10 +41,20 @@ export function SelectCore(props: CoreProps) {
   const searchRef = useRef<HTMLInputElement>(null);
   const typeahead = useRef({ buffer: "", at: 0 });
 
-  const filtered = useMemo(() => {
-    const q = normalize(query.trim());
-    return q ? options.filter((o) => normalize(o.label).includes(q) || normalize(o.description ?? "").includes(q)) : options;
-  }, [options, query]);
+  const filterFor = useCallback(
+    (raw: string) => {
+      const q = normalize(raw.trim());
+      return q ? options.filter((o) => normalize(o.label).includes(q) || normalize(o.description ?? "").includes(q)) : options;
+    },
+    [options],
+  );
+  const filtered = useMemo(() => filterFor(query), [filterFor, query]);
+
+  /** Suche ändern und die aktive Option auf den ersten Treffer setzen. */
+  const changeQuery = (q: string) => {
+    setQuery(q);
+    setActive(filterFor(q).findIndex((x) => !x.disabled));
+  };
 
   const rows: Row[] = useMemo(() => {
     const out: Row[] = [];
@@ -96,11 +106,6 @@ export function SelectCore(props: CoreProps) {
   useEffect(() => {
     if (open && searchable) requestAnimationFrame(() => searchRef.current?.focus());
   }, [open, searchable]);
-
-  // Aktive Option nach dem Filtern auf den ersten Treffer setzen.
-  useEffect(() => {
-    if (open) setActive(filtered.findIndex((x) => !x.disabled));
-  }, [query]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const move = (dir: 1 | -1 | "first" | "last") => {
     if (filtered.length === 0) return;
@@ -208,7 +213,7 @@ export function SelectCore(props: CoreProps) {
             aria-activedescendant={activeId}
             aria-label={props.searchPlaceholder ?? "Suchen"}
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => changeQuery(e.target.value)}
             onKeyDown={onKeyDown}
             placeholder={props.searchPlaceholder ?? "Suchen …"}
             className="h-10 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
@@ -258,6 +263,7 @@ export function SelectCore(props: CoreProps) {
           aria-labelledby={props["aria-labelledby"]}
           aria-describedby={props["aria-describedby"]}
           disabled={disabled}
+          // eslint-disable-next-line react-hooks/refs -- Event-Handler lesen Refs erst bei Interaktion (Floating-UI-Muster)
           {...getReferenceProps({ onClick: () => setOpenState(!open), onKeyDown })}
           className="flex min-h-10 w-full min-w-0 flex-1 items-center gap-2 py-1.5 pr-16 pl-3 text-left outline-none disabled:cursor-not-allowed"
         >
@@ -285,6 +291,7 @@ export function SelectCore(props: CoreProps) {
             <div
               ref={refs.setFloating}
               style={floatingStyles}
+              // eslint-disable-next-line react-hooks/refs -- Event-Handler lesen Refs erst bei Interaktion
               {...getFloatingProps({ onKeyDown: searchable ? undefined : onKeyDown })}
               className="z-50 flex flex-col overflow-hidden rounded-md border bg-popover text-popover-foreground"
             >
