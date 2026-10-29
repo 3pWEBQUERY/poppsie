@@ -1,4 +1,5 @@
 import { eq, sql } from "drizzle-orm";
+import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { db } from "@/db";
 import { clubTypeSchemas, users } from "@/db/schema";
 import { DEFAULT_CLUB_SCHEMAS } from "@/lib/profile/club-schemas";
@@ -6,6 +7,13 @@ import { seedForum } from "@/db/seed-forum";
 
 /** Idempotente Start-Aufgaben: Referenzdaten anlegen, Admin-Rolle vergeben. */
 export async function bootstrap() {
+  // Migrationen beim Start (idempotent); Advisory-Lock verhindert parallele Läufe mehrerer Instanzen.
+  await db.execute(sql`SELECT pg_advisory_lock(hashtext('poppsie:migrate'))`);
+  try {
+    await migrate(db, { migrationsFolder: "./drizzle" });
+  } finally {
+    await db.execute(sql`SELECT pg_advisory_unlock(hashtext('poppsie:migrate'))`);
+  }
   for (const s of DEFAULT_CLUB_SCHEMAS) {
     await db.insert(clubTypeSchemas).values(s).onConflictDoNothing();
   }
