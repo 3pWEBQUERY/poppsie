@@ -148,7 +148,7 @@ export function PlannerBoard({ items, timezone, today, canLocation }: { items: P
                     type="button"
                     disabled={d < today}
                     onClick={() => openNew(d)}
-                    className={cn("flex min-h-20 flex-col gap-1 bg-card p-1.5 text-left transition-colors hover:bg-accent disabled:cursor-default disabled:hover:bg-card", !inMonth && "opacity-40")}
+                    className={cn("flex min-h-20 flex-col gap-1 bg-card p-1.5 text-left transition-colors hover:bg-accent disabled:cursor-default disabled:text-muted-foreground disabled:hover:bg-card", !inMonth && "opacity-40")}
                     aria-label={`${fmtDay(d)}: ${list.length} Aktionen`}
                   >
                     <span className={cn("text-xs tabular-nums", d === today && "flex size-5 items-center justify-center rounded-full bg-primary font-bold text-primary-foreground")}>{Number(d.slice(8, 10))}</span>

@@ -44,6 +44,8 @@ export async function GET(req: Request, ctx: RouteContext<"/api/media/[id]/[vari
     }
   }
 
+  // Ohne Blur-Variante (z. B. Videos) bekommen Gäste bei aktivem Blur nie das Original.
+  if (variant === "b" && !m.blurKey && !viewer && m.blurForGuests) return new Response("Nur für Mitglieder", { status: 403 });
   const key = (m[KEYS[variant as keyof typeof KEYS]] as string | null) ?? m.storageKey;
   const headers = { "Cache-Control": m.purpose === "message" || staff ? "private, no-store" : "private, max-age=300", "X-Content-Type-Options": "nosniff" };
   if (usesBucket) {
