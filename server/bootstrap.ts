@@ -1,0 +1,27 @@
+import { eq, sql } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { migrate } from "drizzle-orm/node-postgres/migrator";
+import { db, getPool } from "@/db";
+import { clubTypeSchemas, users } from "@/db/schema";
+import { DEFAULT_CLUB_SCHEMAS } from "@/lib/profile/club-schemas";
+import { seedForum } from "@/db/seed-forum";
+
+/** Idempotente Start-Aufgaben: Referenzdaten anlegen, Admin-Rolle vergeben. */
+export async function bootstrap() {
+  // Migrationen beim Start (idempotent); Advisory-Lock verhindert parallele Läufe mehrerer Instanzen.
+  const client = await getPool().connect();
+  try {
+    await client.query("SELECT pg_advisory_lock(hashtext('poppsie:migrate'))");
+    await migrate(drizzle(client), { migrationsFolder: "./drizzle" });
+    await client.query("SELECT pg_advisory_unlock(hashtext('poppsie:migrate'))");
+  } finally {
+    client.release();
+  }
+  for (const s of DEFAULT_CLUB_SCHEMAS) {
+    await db.insert(clubTypeSchemas).values(s).onConflictDoNothing();
+  }
+  await seedForum();
+  const admin = process.env.ADMIN_USERNAME;
+  if (admin) await db.update(users).set({ role: "admin" }).where(eq(users.username, admin.toLowerCase()));
+  await db.execute(sql`DELETE FROM pending_registrations WHERE created_at < now() - interval '1 day'`);
+}
