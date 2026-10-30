@@ -27,8 +27,8 @@ export function Hero({ t, images }: { t: Messages["hero"]; images: (string | nul
   const image = images[slide] ?? images[0] ?? null;
 
   return (
-    <section className="relative overflow-hidden bg-paper text-paper-foreground" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
-      <div className="relative mx-auto grid min-h-[480px] max-w-6xl gap-8 px-4 pt-10 pb-40 md:grid-cols-[1fr_auto_280px] md:pb-48">
+    <section className="relative flex min-h-[calc(100svh_-_var(--header-h))] flex-col overflow-hidden bg-paper text-paper-foreground" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
+      <div className="relative mx-auto grid w-full max-w-6xl flex-1 content-center gap-8 px-4 pt-10 pb-40 md:grid-cols-[1fr_auto_280px] md:pb-48">
         <div className="relative z-10 flex flex-col gap-4">
           <h1 key={slide} className="animate-in fade-in-0 font-display text-4xl leading-[1.05] font-extrabold whitespace-pre-line uppercase sm:text-5xl">
             {current.title}

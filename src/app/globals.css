@@ -10,6 +10,8 @@
 
 :root {
   --radius: 0.5rem;
+  /* Höhe des Site-Headers (2 px Linie + 56 px Leiste + 36 px Navigation + 1 px Rand) */
+  --header-h: 95px;
 
   --background: #141619;
   --foreground: #f1f2f3;
